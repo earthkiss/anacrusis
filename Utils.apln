@@ -1,0 +1,86 @@
+:Namespace Utils
+    :Section File System
+    ∇ saveAll
+      saveNamespaces
+      saveFuncs #
+      ⎕SAVE'Chords.dws'
+    ∇
+    ∇ saveNamespaces
+      '(overwrite:1)'⎕SE.Link.Export'#' 'ns'
+    ∇
+    ∇ saveFuncs NS
+      ⍝ Save funcs in current namespace
+      NS←⍕NS
+      {saveFunc NS ⍵}¨⍎NS,'.⎕NL-3'
+      ⍝ Base
+      :If 0=⊃⍴⍎NS,'.⎕NL-9'
+          :Return
+      ⍝ Recurse
+      :Else
+          {saveFuncs(NS,'.',⍵)}¨⍎NS,'.⎕NL-9'
+      :EndIf
+    ∇
+    ∇ saveFunc(NS Name);Dir;remove;replace;ns2dir
+      remove←{⍵[(⍳⍴⍵)~(⍸⍺⍷⍵)]}
+      replace←{((2⊃⍺)@(⍸(1⊃⍺)⍷⍵))⍵}
+      ns2dir←{'./'replace'#'remove ⍵}
+      Dir←ns2dir NS
+      3 ⎕MKDIR'./fn/',Dir
+      (¯1↓⊃,/{⍵,⎕UCS 13}¨⎕NR(NS,'.',Name))⎕NPUT('./fn/',Dir,'/',Name,'.aplf')1
+      3 ⎕MKDIR'./vr/',Dir
+      (⊃,/⎕VR(NS,'.',Name))⎕NPUT('./vr/',Dir,'/',Name,'.aplvr')1
+    ∇
+    :EndSection
+
+    :Section Mathematics
+    ∇ R←pascalsTriangle N;P
+      P←↑{(0∘,+,∘0)⍣⍵,1}¨∘⍳
+      R←↑{((N+1+⍵))⌽((⍉(2×N+1)N⍴(⍉P N),(N+1)N⍴''))[⍵;]}¨⍳N
+    ∇
+    ∇ R←fib N
+      :If N≤2
+          R←1
+      :Else
+          R←(fib(N-1))+(fib(N-2))
+      :EndIf
+    ∇
+    :EndSection
+
+    :Section Bit Crunching
+    grayCode←{⍵≤1 : 2 1⍴0 1 ⋄ (0,R)⍪(1,⊖R←∇ ⍵-1)}
+    neMask←{⌽⊖↑(0⌈(⍳⍺)+⍵-⍺)⍴¨1}
+    :EndSection
+
+    :Section Formatting
+    pretty←{{(⍵+1)⊃'.⎕'}¨⍵}
+    prettyXor←{{(⍵+1)⊃'⎕.'}¨⍵}
+    ∇ R←cmdParts C;P;first;last;Al;Nf;Ns;Fn;Om
+    ⍝ Command partitioning of '(⍺) #.Namespace.Function (⍵)'
+    ⍝   first←{⊃⍸⊃∨/(⍺,⍵){⍵⍷⍺⍺}¨⍵}
+    ⍝   last←{⊃¯1↑⍸⊃∨/⍺{⍵⍷⍺⍺}¨⍵}
+    ⍝   Nf←(¯1+C first' (')↑C       ⍝ #.Namespace,Function
+    ⍝   Ns←((Nf last'.')-⍴Nf)↓Nf    ⍝ #.Namespace.
+    ⍝   Fn←(Nf last'.')↓Nf          ⍝ Function
+    ⍝   Om←(¯1+C first' (')↓C       ⍝ Omega
+     
+      P←⊃('#.[^ (]*'⎕S 0 1)C
+      Al←(1⊃P)↑C
+      Nf←(1⊃P)↓(+/P)↑C
+      Om←(+/P)↓C
+      P←⊃('[^.]+$'⎕S 0 1)Nf
+      Ns←(⊃P)↑Nf
+      Fn←(⊃P)↓Nf
+      R←Al Ns Fn Om
+    ∇
+      ⍝ Delimit char vectors with space unlike ∊
+      flatten←{¯1↓{1≥|≡,⍵:(⍕⍵),' '
+              ⊃,/∇¨,⍵}⍵}
+      ⍝ Show nested structure
+      structure←{1↓¯1↓{1≥|≡,⍵:'[',(⍕⍵),']'
+              ⊃,/'[',(∇¨,⍵),']'}⍵}
+      ⍝ Decompile nested vectors. Chars lose quotes
+      decompile←{1↓¯1↓{1≥|≡,⍵:'(',((1+(1=⊃⍴⍵))⊃(('')(','))),(⍕⍵),')'
+              ⊃,/'(',(∇¨,⍵),')'}⍵}
+    matify←{(↑⍣(1=⊃⍴⍴⍵))⍵}
+    :EndSection
+:EndNamespace

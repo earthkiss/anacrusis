@@ -1,0 +1,486 @@
+:Namespace Chord
+    ∇ Definitions
+      NOTES←(,'C')(,'Db')(,'D')(,'Eb')(,'E')(,'F')(,'Gb')(,'G')(,'Ab')(,'A')(,'Bb')(,'B')
+      NOTES4ths←NOTES[{1+12|⍵×5}¨(⍳12)-1]
+      ⍝
+      Major←(1 0 1 0 1 1 0 1 0 1 0 1)
+      MelodicMinor←(1 0 1 1 0 1 0 1 0 1 0 1)
+      HarmonicMajor←(1 0 1 0 1 1 0 1 1 0 0 1)
+      HarmonicMinor←(1 0 1 1 0 1 0 1 1 0 0 1)
+      WholeTone←(1 0 1 0 1 0 1 0 1 0 1 0)
+      Augmented←(1 0 0 1 1 0 0 1 1 0 0 1)
+      Diminished←(1 0 1 1 0 1 1 0 1 1 0 1)
+      ⍝
+      ChordToneExclusions←(,'noR')(,'no3')(,'no5')(,'no7')(,'no9')(,'no11')(,'no13')(,'no15')(,'no17')(,'no19')(,'no21')(,'no23')(,1⍴' ')(,3⍴' ')
+      ⍝
+      Dual←2
+      Tri←3
+      Quad←4
+      ⍝
+      Diad←2
+      Triad←3
+      Tetrad←4
+      Pentad←5
+      Hexad←6
+      Heptad←7
+      Octad←8
+      Nonad←9
+      Decad←10
+      Undecachord←11
+      Dodecachord←12
+      ⍝
+      ToneRow←12
+    ∇
+    ∇ R←ChordNames C;H
+      :If 1=≡C ⋄ C←⊂C ⋄ :EndIf
+      R←(ChordIdiomSubstitution∘ChordPrimePacking∘ChordFormulae)¨C
+    ∇
+    ∇ R←ChordTertian F;T
+    ⍝ Locate fully tertian chords
+      T←⍸∊{
+          ∧/{
+              C←ChordToneDistance((W[⍵])(W[⍵+1]))
+              ⍝ Select tertian
+              (C=4)∨3=C
+          }¨⍳(⍴W←⍵)-1
+      }¨F
+      R←F[T]
+    ∇
+    ∇ R←ChordToneDistance(C1 C2);ChordTones;PitchClass;PC
+      ⍝ Octave 1
+      ChordTones←(,'R')(,'b3')(,'3')(,'sus')(,'b5')(,'5')(,'#5')(,'6')(,'7')(,'^7')
+      PitchClass←1 4 5 6 7 8 9 10 11 12
+      ⍝ Octave 2
+      ChordTones,←(,'b9')(,'9')(,'#9')(,'b11')(,'11')(,'#11')(,'x11')(,'bb13')(,'b13')(,'13')(,'#13')(,'bb15')(,'b15')
+      PitchClass,←12+2 3 4 5 6 7 8 8 9 10 11 11 12
+      ⍝ Octave 3
+      ChordTones,←(,'15')(,'#15')(,'x15')(,'bb17')(,'b17')(,'17')(,'#17')(,'x17')(,'bb19')(,'b19')(,'19')(,'#19')(,'x19')(,'bbb21')(,'bb21')(,'b21')(,'21')(,'bbb23')
+      PitchClass,←24+1 2 3 3 4 5 6 7 6 7 8 9 10 9 10 11 12 12
+      ⍝ Octave 4
+      ChordTones,←(,'#21')(,'x21')(,'bb23')(,'b23')(,'23')(,'#23')(,'x23')(,'#x23')
+      PitchClass,←36+1 2 1 2 3 4 5 6
+      PC←{PitchClass[⍸⍵⍷ChordTones]}
+      R←(PC C2)-(PC C1)
+      :If R≡⍬ ⋄ R←(,0) ⋄ :EndIf
+    ∇
+    ∇ R←ChordNamesExamples
+      R←⊂ChordIdiomSubstitution¨ChordTertian ChordFormulae 12⍴1
+      R,←⊂ChordNames InversionsCanonical NoteSets27
+      R,←⊂ChordNames Inversions Major
+      R,←⊂ChordNames Inversions MelodicMinor
+      R,←⊂ChordNames Inversions HarmonicMinor
+      R,←⊂ChordNames Inversions HarmonicMajor
+      R,←⊂ChordNames Inversions Augmented
+      R,←⊂ChordNames Inversions WholeTone
+      R,←⊂ChordNames Inversions Diminished
+      R←(⊃⍴R)1⍴R
+    ∇
+    ∇ R←{F}ChordFormulae S;ChordToneType
+⍝ Monadic: fn (note set)
+⍝ Diadic: 'Initial characters' fn (initial chord tone type(note set)).
+⍝ Recursive use: 'Accumulated formulae' fn (next chord tone type(remaining note set)).
+⍝ Output: All possible chord formulae for the note set.
+⍝
+⍝ Initial call sets up recursive parameters
+      :If (12=⍴S)
+          S←1(S)
+          F←''
+      :EndIf
+⍝ Unpack parameters
+      ChordToneType←S[1]
+      S←2⊃S
+⍝ Base case: chord completed
+      :If (((+/S)=0)∧(ChordToneType>7)) ⍝ Process missing tones upto 7th
+          R←⊂F
+     ⍝ Edge cases: no chord and root only
+          :If (⊃R)≡''
+              R←1 1⍴R
+          :ElseIf (≢⊃R)=1
+              R←,R
+          :EndIf
+          :Return
+      :EndIf
+      :Select ChordToneType
+⍝ Base case: chord rejected
+      :Case 0
+          R←''
+⍝ Recursive cases:
+      :Case 1 ⍝ ([1] 0 0 0 0 0 0 0 0 0 0 0)
+⍝ Initial recursion point therefore final result can be lifted to a matrix.
+          :If (1↑S)=0
+        ⍝  R←↑,(F,⊂'noR')ChordFormulae(3 S)
+              R←,(F,⊂'noR')ChordFormulae(3 S)
+          :Else
+        ⍝  R←↑,(F,⊂,'R')ChordFormulae(3×S[1])((0@1)S)
+              R←,(F,⊂,'R')ChordFormulae(3×S[1])((0@1)S)
+          :EndIf
+      :Case 3 ⍝ (0 0 0 [1 1 1] 0 0 0 0 0 0)
+          :If 0=+/3↑3⌽S
+              R←(F,⊂'no3')ChordFormulae(5 S)
+          :Else
+              R←((F,⊂'b3')ChordFormulae(5×S[4])((0@4)S)),((F,⊂,'3')ChordFormulae(5×S[5])((0@5)S)),((F,⊂'sus')ChordFormulae(5×S[6])((0@6)S))
+          :EndIf
+      :Case 5 ⍝ (0 0 0 0 0 0 [1 1 1] 0 0 0)
+          :If 0=+/3↑6⌽S
+              R←(F,⊂'no5')ChordFormulae(7 S)
+          :Else
+              R←((F,⊂'b5')ChordFormulae(7×S[7])((0@7)S)),((F,⊂,'5')ChordFormulae(7×S[8])((0@8)S)),((F,⊂'#5')ChordFormulae(7×S[9])((0@9)S))
+          :EndIf
+      :Case 7 ⍝ (0 0 0 0 0 0 0 0 0 [1 1 1])
+          :If 0=+/3↑9⌽S
+              R←(F,⊂'no7')ChordFormulae(9 S)
+          :Else
+              R←((F,⊂,'6')ChordFormulae(9×S[10])((0@10)S)),((F,⊂,'7')ChordFormulae(9×S[11])((0@11)S)),((F,⊂'^7')ChordFormulae(9×S[12])((0@12)S))
+          :EndIf
+      :Case 9 ⍝ (0 [1 1 1] 0 0 0 0 0 0 0 0)
+          :If 0=+/3↑1⌽S
+              R←(F,⊂'no9')ChordFormulae(11 S)
+          :Else
+              R←((F,⊂'b9')ChordFormulae(11×S[2])((0@2)S)),((F,⊂,'9')ChordFormulae(11×S[3])((0@3)S)),((F,⊂'#9')ChordFormulae(11×S[4])((0@4)S))
+          :EndIf
+      :Case 11 ⍝ (0 0 0 0 [1 1 1 1] 0 0 0 0)
+          :If 0=+/4↑4⌽S
+              R←(F,⊂'no11')ChordFormulae(13 S)
+          :Else
+              R←((F,⊂'b11')ChordFormulae(13×S[5])((0@5)S)),((F,⊂'11')ChordFormulae(13×S[6])((0@6)S)),((F,⊂'#11')ChordFormulae(13×S[7])((0@7)S)),((F,⊂'x11')ChordFormulae(13×S[8])((0@8)S))
+          :EndIf
+      :Case 13 ⍝ (0 0 0 0 0 0 0 [1 1 1 1] 0)
+          :If 0=+/4↑7⌽S
+              R←(F,⊂'no13')ChordFormulae(15 S)
+          :Else
+              R←((F,⊂'bb13')ChordFormulae(15×S[8])((0@8)S)),((F,⊂'b13')ChordFormulae(15×S[9])((0@9)S)),((F,⊂'13')ChordFormulae(15×S[10])((0@10)S)),((F,⊂'#13')ChordFormulae(15×S[11])((0@11)S))
+          :EndIf
+      :Case 15 ⍝ (1 1 1] 0 0 0 0 0 0 0 [1 1)
+          :If 0=+/5↑¯2⌽S
+              R←(F,⊂'no15')ChordFormulae(17 S)
+          :Else
+              R←((F,⊂'bb15')ChordFormulae(17×S[11])((0@11)S)),((F,⊂'b15')ChordFormulae(17×S[12])((0@12)S)),((F,⊂'15')ChordFormulae(17×S[1])((0@1)S)),((F,⊂'#15')ChordFormulae(17×S[2])((0@2)S)),((F,⊂'x15')ChordFormulae(17×S[3])((0@3)S))
+          :EndIf
+      :Case 17 ⍝ (0 0 [1 1 1 1 1] 0 0 0 0 0)
+          :If 0=+/5↑2⌽S
+              R←(F,⊂'no17')ChordFormulae(19 S)
+          :Else
+              R←((F,⊂'bb17')ChordFormulae(19×S[3])((0@3)S)),((F,⊂'b17')ChordFormulae(19×S[4])((0@4)S)),((F,⊂'17')ChordFormulae(19×S[5])((0@5)S)),((F,⊂'#17')ChordFormulae(19×S[6])((0@6)S)),((F,⊂'x17')ChordFormulae(19×S[7])((0@7)S))
+          :EndIf
+      :Case 19 ⍝ (0 0 0 0 0 [1 1 1 1 1] 0 0)
+          :If 0=+/5↑5⌽S
+              R←(F,⊂'no19')ChordFormulae(21 S)
+          :Else
+              R←((F,⊂'bb19')ChordFormulae(21×S[6])((0@6)S)),((F,⊂'b19')ChordFormulae(21×S[7])((0@7)S)),((F,⊂'19')ChordFormulae(21×S[8])((0@8)S)),((F,⊂'#19')ChordFormulae(21×S[9])((0@9)S)),((F,⊂'x19')ChordFormulae(21×S[10])((0@10)S))
+          :EndIf
+      :Case 21 ⍝ (1 1] 0 0 0 0 0 0 [1 1 1 1)
+          :If 0=+/6↑8⌽S
+              R←(F,⊂'no21')ChordFormulae(23 S)
+          :Else
+              R←((F,⊂'bbb21')ChordFormulae(23×S[9])((0@9)S)),((F,⊂'bb21')ChordFormulae(23×S[10])((0@10)S)),((F,⊂'b21')ChordFormulae(23×S[11])((0@11)S)),((F,⊂'21')ChordFormulae(23×S[12])((0@12)S)),((F,⊂'#21')ChordFormulae(23×S[1])((0@1)S)),((F,⊂'x21')ChordFormulae(23×S[2])((0@2)S))
+          :EndIf
+      :Case 23 ⍝ (1 1 1 1 1 1] 0 0 0 0 0 [1)
+          :If 0=+/7↑11⌽S
+         ⍝ Reaching here means failed to construct 23rd Chord with earlier chord tone constraints
+        ⍝  R←⊂,(F,⊂'no23')
+              R←''
+          :Else
+              R←((F,⊂'bbb23')ChordFormulae(24×S[12])((0@12)S)),((F,⊂'bb23')ChordFormulae(24×S[1])((0@1)S)),((F,⊂'b23')ChordFormulae(24×S[2])((0@2)S)),((F,⊂'23')ChordFormulae(24×S[3])((0@3)S)),((F,⊂'#23')ChordFormulae(24×S[4])((0@4)S)),((F,⊂'x23')ChordFormulae(24×S[5])((0@5)S)),((F,⊂'#x23')ChordFormulae(24×S[6])((0@6)S))
+          :EndIf
+      :Case 24 ⍝ Failed to label all chord tones
+    ⍝  R←⊂F
+          R←''
+      :EndSelect
+    ∇
+    ∇ R←ChordPrimePacking F;P
+      P←(PrimePackingIndex F)⊃F
+      ⍝ Remove trailing spaces
+      R←P[⍸∊~P∊(⊂1⍴' '),(⊂3⍴' ')]
+    ∇
+    ∇ R←PrimePackingIndex F;O;T
+      F←↑F
+      ⍝ Prime packing order
+      O←2⊥⍉⌽~F∊ChordToneExclusions
+      ⍝ Select smallest formulae
+      O←⍸O=O[⊃⍋O]
+      ⍝ Remove trailing spaces
+      F←F[O;⍳¯1↑⍸~(⊂,' ')⍷F[⊃O;]]
+      ⍝ Tertian interval merit grades isomorphic chord spellings
+      T←∊{
+      ⍝ Sum to prefer major 3rds over minor 3rds
+          +/{
+              C←ChordToneDistance((W[⍵])(W[⍵+1]))
+              ⍝ (3 4 n) -> (3 4 -n) Prefer tertian over non tertian
+              C×¯1+2×(C=4)∨3=C
+          }¨⍳(⍴W←⍵)-1
+      }¨↓F
+      ⍝ Select formula index with highest tertian merit
+      R←O[⊃⍒T]
+    ∇
+    ∇ R←ChordIdiomSubstitution P;C;E
+      ⍝ 7th Chord
+      :If 'no7'≡⊃P[4] ⋄ C←'' ⋄ :Else ⋄ C←⊃P[4] ⋄ :EndIf
+      :If 'b3'≡⊃P[2] ⋄ C←'-',C ⋄ :EndIf
+      :If 'b5'≡⊃P[3] ⋄ C←C,'b5' ⋄ :EndIf
+      :If C≡'b5' ⋄ C←'[b5]' ⋄ :EndIf
+      :If '#5'≡⊃P[3] ⋄ C←C,'#5' ⋄ :EndIf
+      :If C≡'#5' ⋄ C←'[#5]' ⋄ :EndIf
+      :If 'sus'≡⊃P[2] ⋄ C←C,'sus' ⋄ :EndIf
+      :If 'noR'≡⊃P[1] ⋄ C←C,'NoR' ⋄ :EndIf
+      :If 'no3'≡⊃P[2] ⋄ C←C,'No3' ⋄ :EndIf
+      :If 'no5'≡⊃P[3] ⋄ C←C,'No5' ⋄ :EndIf
+      ⍝ 7th Chord Idioms
+      :If C≡'-6b5' ⋄ C←'o7' ⋄ :EndIf
+      :If C≡'-7b5' ⋄ C←'/o7' ⋄ :EndIf
+      :If C≡'-^7b5' ⋄ C←'o^7' ⋄ :EndIf
+      :If C≡'-b5' ⋄ C←,'o' ⋄ :EndIf
+      :If C≡'[#5]' ⋄ C←,'+' ⋄ :EndIf
+      :If C≡'No3' ⋄ C←,'5' ⋄ :EndIf
+      ⍝ Extensions
+      E←¯1↓∊{⍵,' '}¨P[4+⍸(4-⍴P)↑~P∊(⊂'no9'),(⊂'no11'),(⊂'no13'),(⊂'no15'),(⊂'no17'),(⊂'no19'),(⊂'no21'),(⊂'no23')]
+      :If 0<⍴E ⋄ C←C,'(',E,')' ⋄ :EndIf
+      R←C
+    ∇
+    ∇ R←NoteSets(C T)
+⍝ Returns all notesets of size T containing C notes
+      R←{(1@⍵)T⍴0}¨(#.Comb.combNK T C)
+    ∇
+    ∇ R←NoteSetsFR(C T)
+⍝ Returns all notesets of size T containing C notes
+⍝ Fix root
+      :If C>0
+          C←C-1
+          T←T-1
+          R←{1,((1@⍵)T⍴0)}¨(#.Comb.combNK T C)
+      :Else
+          R←{(1@⍵)T⍴0}¨(#.Comb.combNK T C)
+      :EndIf
+    ∇
+    ∇ R←NoteSets27;CI;CH
+ ⍝ Chromatic Index Matrix
+      CI←(12 12⍴1,12⍴0)
+ ⍝ Generate 27 4 note chord permutations
+      CH←27⍴(1∘.,12 11 10∘.,5 4 6∘.,8 7 9)
+ ⍝ Convert to note sets
+      R←↓∨/[2]27 4 12⍴CI[∊CH;]
+    ∇
+    ∇ R←InversionsCanonical NS
+      :If 1=≡NS ⋄ NS←,⊂NS ⋄ :EndIf
+      R←∪{
+          NS←⍵
+    ⍝ Build inversions
+          I←Inversions NS
+    ⍝ Build formulae
+          F←{ChordPrimePacking ChordFormulae ⍵}¨I
+    ⍝ Select highest precedence inversion
+          ⊃I[PrimePackingIndex F]
+      }¨NS
+    ∇
+    ∇ R←QualityCanonical NS
+      :If 1=≡NS ⋄ NS←,⊂NS ⋄ :EndIf
+      R←∪{
+          NS←⍵
+    ⍝ Build inversions
+          I←Inversions NS
+    ⍝ Grade inversions by tertian interval merit
+          G←{InversionGrade ⍵}¨I
+    ⍝ Select  inversion
+          ⊃I[⊃⍒G]
+      }¨NS
+    ∇
+    ∇ R←InversionGrade I;CT
+      CT←⍸I
+ ⍝ Sum to prefer major 3rds over minor 3rds
+      R←+/{
+          C←(CT[⍵+1])-(CT[⍵])
+    ⍝ (3 4 n) -> (3 4 -n) Prefer tertian over non tertian
+    ⍝  C×¯1+2×(C=4)∨3=C
+          C ⍝ Prefer maximal distribution
+      }¨⍳(⍴CT)-1
+ ⍝ Prefer lower tensions
+      R←(R×1000)++/(12-CT)
+    ∇
+    ∇ R←Inversions NS
+      R←{(⍵-1)⌽NS}¨⍸NS
+    ∇
+    ∇ R←InversionsUnique NS;M
+ ⍝ Requires fixed root NS
+⍝ Build Equivalence Matrix
+      M←↑(⊂NS)∊¨Inversions¨NS             ⍝ Fastest
+ ⍝M←(⊂¨NS)∘.∊Inversions¨NS                v
+ ⍝M←NS∘.{⍺ InversionEquivalence ⍵}NS ⍝ Slowest
+⍝ Mask SW Segment |\
+      M←M∧∘.<⍨⍳⊃⍴M                        ⍝ Fastest
+ ⍝M←M∧(</)¨⍳⍴M                       ⍝    v
+ ⍝M←M∧~↑{⍵⍴1}¨⍳⊃⍴M                   ⍝ Slowest
+⍝ Collate to equivalence array
+      M←∨⌿M
+⍝ Remove equivalents
+      R←NS[⍸~M]
+    ∇
+    ∇ R←C1 InversionEquivalence C2
+      R←(⊂C1)∊Inversions C2
+    ∇
+    ∇ R←InversionPartitions NS;M;P
+ ⍝ Requires fixed root NoteSet
+⍝ Build Equivalence Matrix
+      M←(⊂NS)∊¨Inversions¨NS
+⍝ Identify equivalence sets
+      M←∪M
+⍝ Partition unique inversions
+      P←{⍵~0}¨,/[1]↑⍸¨M
+⍝ Select partitions
+      R←{↑NS[⍵]}¨P
+    ∇
+    ∇ SaveInversionPartitions NS;N;IP;CO
+      IP←InversionPartitions NS
+      N←⊃⍴NS
+      CO←(↑⍸¨NS),⍳N
+      IP←{(↑0+¨⍸¨↓⍵),⍳⊃⍴⍵}¨IP
+      (⊂⍕¨↓CO)⎕NPUT('Jazz Lore/Chords/gnuplot/Combination.txt')1
+      {(⊂⍕¨↓⍵⊃IP)⎕NPUT('Jazz Lore/Chords/gnuplot/Inversion',(⍕⍵),'.txt')1}¨⍳⍴IP
+    ∇
+    ∇ R←C1 Superimpositions C2;T;CN1;CN2;Merged
+      CN1←ChordNames C1
+      CN2←ChordNames C2
+      Merged←{C1∨(5×1-⍵)⌽C2}¨⍳12
+      T←(⊂,'C'),(12 1⍴CN1),(⊂,'<>'),NOTES4ths,(12 1⍴CN2),(⊂'&C'),(ChordNames Merged),(⊂,'&'),(12 1⍴↑{⊂SourceScales ⍵}¨Merged),(⊂,'&')
+      R←T
+    ∇
+    ∇ R←SourceScales C;S;ScaleDegrees;Roman
+      Roman←{⍵,','}¨((,'i')(,'ii')(,'iii')(,'iv')(,'v')(,'vi')(,'vii')(,'viii'))
+⍝ Locate Scale Degrees where pitches occur
+      ScaleDegrees←{¯1↓∊Roman[⍸↑⍺{⍺⍺≡⍺⍺∧⍵}¨(Inversions ⍵)]}
+      R←''
+      S←C ScaleDegrees Major
+      :If 0<⍴S ⋄ R←'M ',S,'.' ⋄ :EndIf
+      S←C ScaleDegrees MelodicMinor
+      :If 0<⍴S ⋄ R←R,'m ',S,'.' ⋄ :EndIf
+      S←C ScaleDegrees HarmonicMajor
+      :If 0<⍴S ⋄ R←R,'H ',S,'.' ⋄ :EndIf
+      S←C ScaleDegrees HarmonicMinor
+      :If 0<⍴S ⋄ R←R,'h ',S,'.' ⋄ :EndIf
+      S←C ScaleDegrees WholeTone
+      :If S≡'i,ii,iii,iv,v,vi' ⋄ S←,'*' ⋄ :EndIf ⍝ Reduce size of long sources
+      :If 0<⍴S ⋄ R←R,'W ',S,'.' ⋄ :EndIf
+      S←C ScaleDegrees Augmented
+      :If 0<⍴S ⋄ R←R,'A ',S,'.' ⋄ :EndIf
+      S←C ScaleDegrees Diminished
+      :If S≡'i,ii,iii,iv,v,vi,vii,viii' ⋄ S←,'*' ⋄ :EndIf
+      :If S≡'i,iii,v,vii' ⋄ S←,'i*' ⋄ :EndIf
+      :If S≡'ii,iv,vi,viii' ⋄ S←,'ii*' ⋄ :EndIf
+      :If 0<⍴S ⋄ R←R,'D ',S,'.' ⋄ :EndIf
+    ∇
+    ∇ R←SaveSuperimpositions;NS;M
+      NS←InversionsUnique NoteSets27
+      M←⍉NS∘.Superimpositions NS
+ ⍝ Beautuful matrix of superimpositions to ugly csv file
+      M←⍉54 6⍴⍉M
+      M←,/M
+      M←{,/⍵}¨M
+      M←{(⊂(3×54)⍴,'&'),⍵}¨M
+      M←⊃,/M
+      M←{'&',⍵}¨M
+      (,/{⍵,⎕UCS 13}¨M)⎕NPUT('Jazz Lore/Chords/7th Chord Superimpositions.csv')1
+    ∇
+    ∇ R←Composite(N T S NS);I;M;L
+⍝ Generate all 12 chord transpositions
+      I←{⊃,/{⊃({⍵⌽C}¨(1-(⍳12)))(C←⍵)}¨⍵}
+⍝ Merge all transposition combinations of N component chords
+      M←⊃{(I ⍺)∘.∨(⍵)}/{,⊂⍵}¨NS
+⍝ Filter for correct note count
+      L←⍸{S=+/⍵}¨M
+⍝ Format
+      :If 0=+/⊃L ⋄ R←⍬ ⋄ :Return ⋄ :EndIf
+⍝ ((R1 N1)(R2 N2)...(Rn Nn))
+      R←{(⊂(⊂,⍵[N]),(NS[N])),(↓⍉↑({,⍵}¨⍵[N-⍳N-1])(NS[N-⍳N-1]))}¨L
+    ∇
+    ∇ R←Composites(N T S NS)
+⍝ Generate composites for all permutations of N components
+⍝  R←⊃,/{Composite(N T S(NS[⍵]))}¨((⍴NS)*(N))⍴(⍳⍴NS)({⍺∘.,⍵}⍣(N-1))(⍳⍴NS)
+⍝  R←⊃,/{Composite(N T S(NS[⍵]))}¨((⍴NS)*(N))⍴,¨⍳N⍴⍴NS
+      R←⊃,/{Composite(N T S(NS[⍵]))}¨#.Comb.combrNK(⍴NS)N
+    ∇
+    ∇ R←CompositesCanonical CTRS
+      :If 3=≡CTRS ⋄ CTRS←⊂CTRS ⋄ :EndIf
+      R←∪{CompositesNormalisePermutations ⍵}¨CTRS
+    ∇
+    ∇ R←CompositesNormalisePermutations CTR
+⍝ Normalise all component permutations
+      R←{CompositesNormaliseSymmetries CTR[∊⍵]}¨#.Comb.permN ⍴CTR
+⍝ Arbitrarily select lowest sorted as canonical representation
+      R←⊃R[⊃⍋R]
+    ∇
+    ∇ R←CompositesNormaliseSymmetries CTR;CTRS;S;T;TN;TC;X
+⍝ Normalise composite with symmetrical components
+⍝ Transpose note ⍺ into lowest ⍵ symmetry
+      S←{1+⍵|¯1+⍺}
+⍝ Transpose note ⍺ up by ⍵
+      T←{1+12|¯1+⍺+⍵}
+⍝ Transpose note ⍺ by note ⍵
+      TN←{1+12|¯1+⍺-⍵-1}
+⍝ Transpose Composite Tone Row to C
+      TC←{
+          W←⍵
+          R1←,1
+          C1←(1 2)⊃⍵
+          RC←{
+              R←((⍵ 1)⊃W)TN((1 1)⊃W)
+              C←(⍵ 2)⊃W
+              R C
+          }¨1+(⍳(⍴⍵)-1)
+          (⊂R1 C1),(RC)
+      }
+⍝ 1st component symmetrical
+⍝ [C+ ]<> Db+ <> G-  <> B
+⍝             v              Create all symmetries of 1st component
+⍝ [C+ ]<> Db+ <> G-  <> B
+⍝ [E+ ]<> Db+ <> G-  <> B
+⍝ [Ab+]<> Db+ <> G-  <> B
+⍝             v              Transpose composites to C
+⍝ [C+ ]<> Db+ <> G-  <> B    retaining component inter-structure
+⍝ [C+ ]<> A+  <> Eb- <> G
+⍝ [C+ ]<> F+  <> B-  <> Eb
+      :If 1<X←Symmetries(1 2)⊃CTR
+          CTRS←X⍴⊂CTR
+          {((⍵ 1 1)⊃CTRS)←(((⍵ 1 1)⊃CTRS)T(⍵-1)×(12÷X))}¨⍳⍴CTRS
+          CTRS←{TC ⍵}¨CTRS
+      :Else
+          CTRS←,⊂TC CTR
+      :EndIf
+⍝ For all other symmetrical components
+⍝  C+  <>[Db+]<> G-  <> B
+⍝  C+  <>[A+ ]<> Eb- <> G
+⍝  C+  <>[F+ ]<> B-  <> Eb
+⍝             v              Transpose to lowest symmetry
+⍝  C+  <>[Db+]<> G-  <> B
+⍝  C+  <>[Db+]<> Eb- <> G
+⍝  C+  <>[Db+]<> B-  <> Eb
+⍝             v              Select canonical form
+⍝  C+  <> Db+ <> Eb- <> G
+      {
+          {
+              ((W ⍵ 1)⊃CTRS)←(((W ⍵ 1)⊃CTRS)S 12÷Symmetries(W ⍵ 2)⊃CTRS)
+          }¨1+⍳(⍴⊃CTRS[W←⍵])-1
+      }¨⍳⍴CTRS
+      R←⊃CTRS[⊃⍋CTRS]
+    ∇
+    ∇ R←Symmetries NS
+      R←+/{NS≡⍵⌽NS}¨⍳12
+    ∇
+    ∇ R←CompositesHomogeneous CTRS
+⍝ Locate n way homogeneous composites
+⍝  R←CTRS[⍸{∧/{((⍵ 2)⊃W)≡(((⍵+1)2)⊃W)}¨⍳(⍴W←⍵)-1}¨CTRS]
+      R←({∧/{((⍵ 2)⊃W)≡(((⍵+1)2)⊃W)}¨⍳(⍴W←⍵)-1}¨CTRS)/CTRS
+    ∇
+    ∇ R←CompositesSymbolic C
+⍝ With '<>' symbol
+      R←{¯1↓⊃,/{(⊂(⊃NOTES[⍵[1]]),⊃(ChordNames ⍵[2])),⊂'<>'}¨⍵}¨C
+⍝ Without '<>' symbol
+⍝  R←{⊃,/{(⊂(⊃NOTES[⍵[1]]),⊃(ChordNames ⍵[2]))}¨⍵}¨C
+    ∇
+    ∇ R←CompositesExamples
+      R←⊂↑CompositesSymbolic CompositesHomogeneous CompositesCanonical Composites(2 6 12(InversionsCanonical NoteSetsFR 6 12))
+      R,←⊂↑CompositesSymbolic CompositesHomogeneous CompositesCanonical Composites(3 4 12(InversionsCanonical NoteSetsFR 4 12))
+      R,←⊂↑CompositesSymbolic CompositesHomogeneous CompositesCanonical Composites(4 3 12(InversionsCanonical NoteSetsFR 3 12))
+⍝  ↑CompositesSymbolic CompositesHomogeneous CompositesCanonical Composites(6 2 12 (InversionsCanonical NoteSetsFR 2 12))
+      R,←⊂↑CompositesSymbolic CompositesCanonical Composites(4 3 12((InversionsCanonical NoteSetsFR 3 12)[16 17 18 19]))
+      R,←⊂↑CompositesSymbolic CompositesCanonical Composites(3 4 12((InversionsCanonical NoteSets27)[1 3 4 10 13 14 18]))
+⍝  R←(⊃⍴R)1⍴R
+    ∇
+:EndNamespace

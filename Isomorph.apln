@@ -1,0 +1,657 @@
+:Namespace Isomorph
+    ∇ R←IsomorphAdjMat NS;NSR;IS;IAM;T;C;N
+      T←(⍴NS)[2]
+      C←+/T
+      N←(⍴NS)[1]
+⍝ Generate rotation matrix. T-1 to avoid final self rotation
+      NSR←((⍳N)-1)∘.⊖((⍳(T-1))∘.⌽⊂NS)
+⍝ Compare with note set to identify isomorphs
+      IS←N 1⍴⊂[2 3]1 3 2⍉N(T-1)N⍴(⊂[2]((N*2)×(T-1))T⍴∊NSR)≡¨(⊂[2]((N*2)×(T-1))T⍴NS)
+⍝ Skew, rotate back and merge to generate adjacency matrix graph
+      IAM←N N⍴⊃∨/(-(⍳N)-1)⌽¨(⊂[2 3]N(N+1)N⍴(((N*2)1⍴∨/(N*2)(T-1)⍴∊IS),((N*2)N⍴0)))
+ ⍝R←NS NSR IS IAM
+      R←IAM
+    ∇
+    ∇ R←IsomorphUnique ARGS;P;NS;IG;IP;IR
+      :If 1=⍴⍴ARGS
+          P←⊃ARGS[1]
+          NS←⊃ARGS[2]
+      :Else
+    ⍝ Default isomorph partition
+          P←1
+          NS←ARGS
+      :EndIf
+ ⍝ (6 NoteSets 4),IsomorphAdjMat(6 NoteSets 4)
+⍝ ┌→────────────────────────────────────┐
+⍝ │ ┌→──────────┐ ┌→──────────────────┐ │
+⍝ │ ↓1 0 0 1 1 1│ ↓0 0 0 0 1 0 0 1 0 1│ │
+⍝ │ │1 0 1 0 1 1│ │0 0 0 1 0 1 0 0 1 0│ │
+⍝ │ │1 0 1 1 0 1│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 0 1 1 1 0│ │0 1 0 0 0 1 0 0 1 0│ │
+⍝ │ │1 1 0 0 1 1│ │1 0 0 0 0 0 0 1 0 1│ │
+⍝ │ │1 1 0 1 0 1│ │0 1 0 1 0 0 0 0 1 0│ │
+⍝ │ │1 1 0 1 1 0│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 1 1 0 0 1│ │1 0 0 0 1 0 0 0 0 1│ │
+⍝ │ │1 1 1 0 1 0│ │0 1 0 1 0 1 0 0 0 0│ │
+⍝ │ │1 1 1 1 0 0│ │1 0 0 0 1 0 0 1 0 0│ │
+⍝ │ └~──────────┘ └~──────────────────┘ │
+⍝ └∊────────────────────────────────────┘
+⍝    The Isomorph Adjacency Matrix, for all pairs of note sets,
+⍝    attributes rotational equivalence, proving useful for
+⍝    the following note set partitioning schemes.
+⍝
+⍝ IsomorphUnique:
+⍝    Note sets with no alternative inversions.
+⍝    IsomorphsRemoved + IsomorphPrimes.
+      IG←IsomorphGroups NS
+      IR←IsomorphsRemoved NS IG
+      IP←IsomorphSelect P NS IG
+      R←IP⍪IR
+    ∇
+    ∇ R←IsomorphGroups NS;N;T;IAM;IG
+      N←⊃⍴NS
+      T←2⊃⍴NS
+      IAM←IsomorphAdjMat NS
+⍝ (NoteSetsFR 4 6)(IsomorphAdjMat NoteSetsFR 4 6)
+⍝ ┌→────────────────────────────────────┐
+⍝ │ ┌→──────────┐ ┌→──────────────────┐ │
+⍝ │ ↓1 0 0 1 1 1│ ↓0 0 0 0 1 0 0 1 0 1│ │
+⍝ │ │1 0 1 0 1 1│ │0 0 0 1 0 1 0 0 1 0│ │
+⍝ │ │1 0 1 1 0 1│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 0 1 1 1 0│ │0 1 0 0 0 1 0 0 1 0│ │
+⍝ │ │1 1 0 0 1 1│ │1 0 0 0 0 0 0 1 0 1│ │
+⍝ │ │1 1 0 1 0 1│ │0 1 0 1 0 0 0 0 1 0│ │
+⍝ │ │1 1 0 1 1 0│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 1 1 0 0 1│ │1 0 0 0 1 0 0 0 0 1│ │
+⍝ │ │1 1 1 0 1 0│ │0 1 0 1 0 1 0 0 0 0│ │
+⍝ │ │1 1 1 1 0 0│ │1 0 0 0 1 0 0 1 0 0│ │
+⍝ │ └~──────────┘ └~──────────────────┘ │
+⍝ └∊────────────────────────────────────┘
+⍝    The Isomorph Adjacency Matrix, for all pairs of note sets,
+⍝    attributes rotational equivalence, proving useful for
+⍝    the following note set partitioning schemes.
+⍝
+⍝ IsomorphGroups:
+⍝    Group note sets by rotational equivalence.
+⍝
+⍝    Zero SW triangle to make IAM undirected.
+⍝ ┌→────────────────────────────────────┐
+⍝ │ ┌→──────────┐ ┌→──────────────────┐ │
+⍝ │ ↓1 0 0 1 1 1│ ↓0 0 0 0 1 0 0 1 0 1│ │
+⍝ │ │1 0 1 0 1 1│ │0 0 0 1 0 1 0 0 1 0│ │
+⍝ │ │1 0 1 1 0 1│ │0 0 0 0 0 0 1 0 0 0│ │
+⍝ │ │1 0 1 1 1 0│ │0 0 0 0 0 1 0 0 1 0│ │
+⍝ │ │1 1 0 0 1 1│ │0 0 0 0 0 0 0 1 0 1│ │
+⍝ │ │1 1 0 1 0 1│ │0 0 0 0 0 0 0 0 1 0│ │
+⍝ │ │1 1 0 1 1 0│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ │1 1 1 0 0 1│ │0 0 0 0 0 0 0 0 0 1│ │
+⍝ │ │1 1 1 0 1 0│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ │1 1 1 1 0 0│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ └~──────────┘ └~──────────────────┘ │
+⍝ └∊────────────────────────────────────┘
+      IAM←IAM∧(⍳N)∘.<(⍳N)
+⍝    Zero each columm after first 1 to avoid overlaping groups.
+⍝ ┌→────────────────────────────────────┐
+⍝ │ ┌→──────────┐ ┌→──────────────────┐ │
+⍝ │ ↓1 0 0 1 1 1│ ↓0 0 0 0→1 0 0→1 0→1│ │
+⍝ │ │1 0 1 0 1 1│ │0 0 0→1 0→1 0 0→1 0│ │
+⍝ │ │1 0 1 1 0 1│ │0 0 0 0 0 0→1 0 0 0│ │
+⍝ │ │1 0 1 1 1 0│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ │1 1 0 0 1 1│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ │1 1 0 1 0 1│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ │1 1 0 1 1 0│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ │1 1 1 0 0 1│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ │1 1 1 0 1 0│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ │1 1 1 1 0 0│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ └~──────────┘ └~──────────────────┘ │
+⍝ └∊────────────────────────────────────┘
+      IAM←⍉↑{1↓(1@(⍵+1))(N+1)⍴0}¨⊃¨⍸¨↓⍉IAM
+⍝ Set diagonal to include row # in groups
+      IAM←IAM∨(⍳N)∘.=(⍳N)
+⍝    Group each row of isomorphs.
+⍝    (1 5 8 10) (2 4 6 9) (3 7)
+      IG←⍸¨↓IAM
+      IG←(∊1≠⍴¨IG)⌿IG ⍝ remove single note sets
+      R←IG
+ ⍝NSIG←{NS[⍵;]}¨IG
+ ⍝R←NSIG
+     
+⍝ Correllate with note sets
+ ⍝R←↑¨⊂[1]↑{(↓NS)[⊃IG[⍵]]}¨⍳N
+    ∇
+    ∇ R←IsomorphUniqueArb NS;N;IAM
+⍝ Unique Shapes 2: Alternative algorithm.
+⍝    Arbitrarily removes all but 1 of each Isomorph Group from initial note sets.
+⍝
+⍝    0:(6 NoteSets 4),IsomorphAdjMat(6 NoteSets 4)
+      N←(⍴NS)[1]
+      IAM←IsomorphAdjMat NS
+⍝ ┌→────────────────────────────────────┐
+⍝ │ ┌→──────────┐ ┌→──────────────────┐ │
+⍝ │ ↓1 0 0 1 1 1│ ↓0 0 0 0 1 0 0 1 0 1│ │
+⍝ │ │1 0 1 0 1 1│ │0 0 0 1 0 1 0 0 1 0│ │
+⍝ │ │1 0 1 1 0 1│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 0 1 1 1 0│ │0 1 0 0 0 1 0 0 1 0│ │
+⍝ │ │1 1 0 0 1 1│ │1 0 0 0 0 0 0 1 0 1│ │
+⍝ │ │1 1 0 1 0 1│ │0 1 0 1 0 0 0 0 1 0│ │
+⍝ │ │1 1 0 1 1 0│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 1 1 0 0 1│ │1 0 0 0 1 0 0 0 0 1│ │
+⍝ │ │1 1 1 0 1 0│ │0 1 0 1 0 1 0 0 0 0│ │
+⍝ │ │1 1 1 1 0 0│ │1 0 0 0 1 0 0 1 0 0│ │
+⍝ │ └~──────────┘ └~──────────────────┘ │
+⍝ └∊────────────────────────────────────┘
+⍝
+⍝    1: Zero SW triangle to make IAM undirected.
+      R←IAM∧((⍳N)∘.<(⍳N))
+⍝    This allows us to efficiently remove 1 of each edge pair.
+⍝ ┌→────────────────────────────────────┐
+⍝ │ ┌→──────────┐ ┌→──────────────────┐ │
+⍝ │ ↓1 0 0 1 1 1│ ↓0 0 0 0 1 0 0 1 0 1│ │
+⍝ │ │1 0 1 0 1 1│ │0 0 0 1 0 1 0 0 1 0│ │
+⍝ │ │1 0 1 1 0 1│ │0 0 0 0 0 0 1 0 0 0│ │
+⍝ │ │1 0 1 1 1 0│ │0 0 0 0 0 1 0 0 1 0│ │
+⍝ │ │1 1 0 0 1 1│ │0 0 0 0 0 0 0 1 0 1│ │
+⍝ │ │1 1 0 1 0 1│ │0 0 0 0 0 0 0 0 1 0│ │
+⍝ │ │1 1 0 1 1 0│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ │1 1 1 0 0 1│ │0 0 0 0 0 0 0 0 0 1│ │
+⍝ │ │1 1 1 0 1 0│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ │1 1 1 1 0 0│ │0 0 0 0 0 0 0 0 0 0│ │
+⍝ │ └~──────────┘ └~──────────────────┘ │
+⍝ └∊────────────────────────────────────┘
+⍝
+⍝    2: Merge columns to identify rejection set.
+      R←∨/R
+⍝    (0 0 0 1 1 1 1 1 1 1)
+⍝    (4 5 6 7 8 9 10)
+⍝
+⍝    3: Remove from initial note set.
+      R←(~R)⌿NS
+⍝    (1 2 3)
+⍝
+⍝ One liner
+ ⍝R←(~∨/(IAM∧((⍳N)∘.<(⍳N))))⌿NS
+    ∇
+    ∇ R←IsomorphsRemoved(NS IG)
+⍝ (6 NoteSets 4),IsomorphAdjMat(6 NoteSets 4)
+⍝ ┌→────────────────────────────────────┐
+⍝ │ ┌→──────────┐ ┌→──────────────────┐ │
+⍝ │ ↓1 0 0 1 1 1│ ↓0 0 0 0 1 0 0 1 0 1│ │
+⍝ │ │1 0 1 0 1 1│ │0 0 0 1 0 1 0 0 1 0│ │
+⍝ │ │1 0 1 1 0 1│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 0 1 1 1 0│ │0 1 0 0 0 1 0 0 1 0│ │
+⍝ │ │1 1 0 0 1 1│ │1 0 0 0 0 0 0 1 0 1│ │
+⍝ │ │1 1 0 1 0 1│ │0 1 0 1 0 0 0 0 1 0│ │
+⍝ │ │1 1 0 1 1 0│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 1 1 0 0 1│ │1 0 0 0 1 0 0 0 0 1│ │
+⍝ │ │1 1 1 0 1 0│ │0 1 0 1 0 1 0 0 0 0│ │
+⍝ │ │1 1 1 1 0 0│ │1 0 0 0 1 0 0 1 0 0│ │
+⍝ │ └~──────────┘ └~──────────────────┘ │
+⍝ └∊────────────────────────────────────┘
+⍝    The Isomorph Adjacency Matrix, for all pairs of note sets,
+⍝    attributes rotational equivalence, proving useful for
+⍝    the following note set partitioning schemes.
+⍝
+⍝ IsomorphsRemoved:
+⍝    Note sets with no rotational equivalence.
+⍝    Initial note set - IsomorphGroups.
+      R←↑(↓NS)[(⍳⊃⍴NS)~∊IG]
+    ∇
+    ∇ R←IsomorphPrimes NS
+      R←↑(IsomorphPrime¨↓NS)
+    ∇
+    ∇ R←IsomorphPrime CH
+ ⍝ Inversion with tightest upper packing of notes
+      I←{(⍵-1)⌽CH}¨(⍸CH)
+      D←{2⊥⌽⍵}¨I
+      R←⊃I[⊃⍒D]
+    ∇
+    ∇ R←IsomorphPartitions NS;C
+      C←+/NS[1;]
+      R←{IsomorphUnique ⍵ NS}¨⍳C
+    ∇
+    ∇ R←IsomorphSelect(N NS IG);S;P
+⍝ (6 NoteSets 4),IsomorphAdjMat(6 NoteSets 4)
+⍝ ┌→────────────────────────────────────┐
+⍝ │ ┌→──────────┐ ┌→──────────────────┐ │
+⍝ │ ↓1 0 0 1 1 1│ ↓0 0 0 0 1 0 0 1 0 1│ │
+⍝ │ │1 0 1 0 1 1│ │0 0 0 1 0 1 0 0 1 0│ │
+⍝ │ │1 0 1 1 0 1│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 0 1 1 1 0│ │0 1 0 0 0 1 0 0 1 0│ │
+⍝ │ │1 1 0 0 1 1│ │1 0 0 0 0 0 0 1 0 1│ │
+⍝ │ │1 1 0 1 0 1│ │0 1 0 1 0 0 0 0 1 0│ │
+⍝ │ │1 1 0 1 1 0│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 1 1 0 0 1│ │1 0 0 0 1 0 0 0 0 1│ │
+⍝ │ │1 1 1 0 1 0│ │0 1 0 1 0 1 0 0 0 0│ │
+⍝ │ │1 1 1 1 0 0│ │1 0 0 0 1 0 0 1 0 0│ │
+⍝ │ └~──────────┘ └~──────────────────┘ │
+⍝ └∊────────────────────────────────────┘
+⍝    The Isomorph Adjacency Matrix, for all pairs of note sets,
+⍝    attributes rotational equivalence, proving useful for
+⍝    the following note set partitioning schemes.
+⍝
+⍝ IsomorphPrimes:
+⍝    Prime representatives from each group of isomorphs.
+⍝
+⍝    Select single isomorph from each set of Group Isomorphs.
+⍝ nth Isomorph
+      R←NS[⊃¨(N-1)⌽¨IG;]
+⍝ All
+⍝  S←S[⊃⍒S←(⊃⍴)¨IG]
+⍝  P←0
+⍝  R←,⍬
+⍝  :While P<S
+⍝      R←R,⊂↑(↓NS)[⊃¨(P)⌽¨IG]
+⍝      P←P+1
+⍝  :EndWhile
+    ∇
+    ∇ R←IsomorphSelf NS
+⍝ (6 NoteSets 4),IsomorphAdjMat(6 NoteSets 4)
+⍝ ┌→────────────────────────────────────┐
+⍝ │ ┌→──────────┐ ┌→──────────────────┐ │
+⍝ │ ↓1 0 0 1 1 1│ ↓0 0 0 0 1 0 0 1 0 1│ │
+⍝ │ │1 0 1 0 1 1│ │0 0 0 1 0 1 0 0 1 0│ │
+⍝ │ │1 0 1 1 0 1│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 0 1 1 1 0│ │0 1 0 0 0 1 0 0 1 0│ │
+⍝ │ │1 1 0 0 1 1│ │1 0 0 0 0 0 0 1 0 1│ │
+⍝ │ │1 1 0 1 0 1│ │0 1 0 1 0 0 0 0 1 0│ │
+⍝ │ │1 1 0 1 1 0│ │0 0 1 0 0 0 1 0 0 0│ │
+⍝ │ │1 1 1 0 0 1│ │1 0 0 0 1 0 0 0 0 1│ │
+⍝ │ │1 1 1 0 1 0│ │0 1 0 1 0 1 0 0 0 0│ │
+⍝ │ │1 1 1 1 0 0│ │1 0 0 0 1 0 0 1 0 0│ │
+⍝ │ └~──────────┘ └~──────────────────┘ │
+⍝ └∊────────────────────────────────────┘
+⍝    The Isomorph Adjacency Matrix, for all pairs of note sets,
+⍝    attributes rotational equivalence, proving useful for
+⍝    the following note set partitioning schemes.
+⍝
+⍝ IsomorphSelf:
+⍝    Note sets that are self isomorphic, symmetrical.
+⍝    SelfIso ⊆ Isomorph.
+⍝
+⍝    NW, SE diagonal contains all Self Isomorphs.
+⍝    (3 7)
+⍝    Intersect with Prime Isomorphs to select single Self Isomorph.
+⍝    (1 2 3) ∩ (3 7) → (3)
+⍝
+    ∇
+    ∇ R←IsomorphEdgePairs NS;N;IAM;IEP
+⍝ # note sets including isomorphs
+      N←(⍴NS)[1]
+      IAM←IsomorphAdjMat NS
+⍝ Convert adjacency matrix to edge pair graph
+      R←IEP←(∊IAM)⌿(×/⍴IAM)⍴((⍳((⍴IAM)[1]))∘.,(⍳((⍴IAM)[2])))
+⍝ Alternative algorithm using edge pair graph
+⍝   Large example:
+⍝   a←(2 4)(2 10)(3 7)(3 19)(4 2)(5 13)(6 16)(7 3)(8 22)(9 25)(10 2)(12 20)(13 5)(16 6)(19 3)(20 12)(22 8)(25 9)
+⍝   Small example:
+⍝   a←(1 2)(2 1)(2 3)(3 2)(3 4)(4 3)(5 6)(6 5)
+⍝ ┌→────────────────────────────────────────────────┐
+⍝ │ ┌→──┐ ┌→──┐ ┌→──┐ ┌→──┐ ┌→──┐ ┌→──┐ ┌→──┐ ┌→──┐ │
+⍝ │ │1 2│ │2 1│ │2 3│ │3 2│ │3 4│ │4 3│ │5 6│ │6 5│ │
+⍝ │ └~──┘ └~──┘ └~──┘ └~──┘ └~──┘ └~──┘ └~──┘ └~──┘ │
+⍝ └∊────────────────────────────────────────────────┘
+⍝ Find shared nodes for all combinations of edge pairs:
+⍝   O(n*2)/2
+⍝   character nodes:
+⍝   6 6⍴(6 1⍴''),((6 12⍴((6 5⍴''),(a∘.∩a)))[;6+⍳5]),(6 1⍴'')
+⍝   numeric nodes:
+⍝   (a∘.∩a)∧((⍳⍴a)∘.<(⍳⍴a))
+⍝ ┌→────────────────────────────────────────────────┐
+⍝ ↓ ┌→──┐ ┌→──┐ ┌→┐   ┌→┐   ┌⊖┐   ┌⊖┐   ┌⊖┐   ┌⊖┐   │
+⍝ │ │0 0│ │1 2│ │2│   │2│   │0│   │0│   │0│   │0│   │
+⍝ │ └~──┘ └~──┘ └~┘   └~┘   └~┘   └~┘   └~┘   └~┘   │
+⍝ │ ┌→──┐ ┌→──┐ ┌→┐   ┌→┐   ┌⊖┐   ┌⊖┐   ┌⊖┐   ┌⊖┐   │
+⍝ │ │0 0│ │0 0│ │2│   │2│   │0│   │0│   │0│   │0│   │
+⍝ │ └~──┘ └~──┘ └~┘   └~┘   └~┘   └~┘   └~┘   └~┘   │
+⍝ │ ┌→┐   ┌→┐   ┌→──┐ ┌→──┐ ┌→┐   ┌→┐   ┌⊖┐   ┌⊖┐   │
+⍝ │ │0│   │0│   │0 0│ │2 3│ │3│   │3│   │0│   │0│   │
+⍝ │ └~┘   └~┘   └~──┘ └~──┘ └~┘   └~┘   └~┘   └~┘   │
+⍝ │ ┌→┐   ┌→┐   ┌→──┐ ┌→──┐ ┌→┐   ┌→┐   ┌⊖┐   ┌⊖┐   │
+⍝ │ │0│   │0│   │0 0│ │0 0│ │3│   │3│   │0│   │0│   │
+⍝ │ └~┘   └~┘   └~──┘ └~──┘ └~┘   └~┘   └~┘   └~┘   │
+⍝ │ ┌⊖┐   ┌⊖┐   ┌→┐   ┌→┐   ┌→──┐ ┌→──┐ ┌⊖┐   ┌⊖┐   │
+⍝ │ │0│   │0│   │0│   │0│   │0 0│ │3 4│ │0│   │0│   │
+⍝ │ └~┘   └~┘   └~┘   └~┘   └~──┘ └~──┘ └~┘   └~┘   │
+⍝ │ ┌⊖┐   ┌⊖┐   ┌→┐   ┌→┐   ┌→──┐ ┌→──┐ ┌⊖┐   ┌⊖┐   │
+⍝ │ │0│   │0│   │0│   │0│   │0 0│ │0 0│ │0│   │0│   │
+⍝ │ └~┘   └~┘   └~┘   └~┘   └~──┘ └~──┘ └~┘   └~┘   │
+⍝ │ ┌⊖┐   ┌⊖┐   ┌⊖┐   ┌⊖┐   ┌⊖┐   ┌⊖┐   ┌→──┐ ┌→──┐ │
+⍝ │ │0│   │0│   │0│   │0│   │0│   │0│   │0 0│ │5 6│ │
+⍝ │ └~┘   └~┘   └~┘   └~┘   └~┘   └~┘   └~──┘ └~──┘ │
+⍝ │ ┌⊖┐   ┌⊖┐   ┌⊖┐   ┌⊖┐   ┌⊖┐   ┌⊖┐   ┌→──┐ ┌→──┐ │
+⍝ │ │0│   │0│   │0│   │0│   │0│   │0│   │0 0│ │0 0│ │
+⍝ │ └~┘   └~┘   └~┘   └~┘   └~┘   └~┘   └~──┘ └~──┘ │
+⍝ └∊────────────────────────────────────────────────┘
+⍝ Remove all shared nodes from initial edges:
+⍝   a ~¨,/[1](a∘.∩a)∧((⍳⍴a)∘.<(⍳⍴a))
+⍝ ┌→────────────────────────────────────┐
+⍝ │ ┌→──┐ ┌⊖┐ ┌→┐ ┌⊖┐ ┌→┐ ┌⊖┐ ┌→──┐ ┌⊖┐ │
+⍝ │ │1 2│ │0│ │3│ │0│ │4│ │0│ │5 6│ │0│ │
+⍝ │ └~──┘ └~┘ └~┘ └~┘ └~┘ └~┘ └~──┘ └~┘ │
+⍝ └∊────────────────────────────────────┘
+⍝   (a ~¨,/[1](a∘.∩a)∧((⍳⍴a)∘.<(⍳⍴a)))~⊂⍬
+⍝ ┌→────────────────────┐
+⍝ │ ┌→──┐ ┌→┐ ┌→┐ ┌→──┐ │
+⍝ │ │1 2│ │3│ │4│ │5 6│ │
+⍝ │ └~──┘ └~┘ └~┘ └~──┘ │
+⍝ └∊────────────────────┘
+⍝ Nodes for deletion:
+⍝   ⊃¨(a ~¨,/[1](a∘.∩a)∧((⍳⍴a)∘.<(⍳⍴a)))~⊂⍬
+⍝ ┌→──────┐
+⍝ │1 3 4 5│
+⍝ └~──────┘
+    ∇
+    ∇ R←AnalyseInPartition;NS
+      T←4
+      R←⍬
+      :While T<100
+          NS←NoteSetsFR 4 T
+          I←+/{InPartition 4 T(1↓⍸⍵)}¨↓NS
+          C←⊃⍴NS
+          R←R,⎕←⊂T,C,I,(⌊C÷4),(C-(4×⌊C÷4))
+          T←T+1
+      :EndWhile
+    ∇
+    ∇ R←FindPeturbationValues;S;T;NS;IU;I;U;IP;D;L;M
+      R←⍬
+      S←5
+      T←10
+      NS←↓NoteSetsFR S T
+      IU←↓IsomorphUnique↑NS
+ ⍝I←(3*12)-1
+      I←(3*8)-1
+      L←999
+      :While I>0
+          U←((8⍴3)⊤I)-1
+          IP←({InPartition4D S T(1↓⍸⍵)U}¨(NS))⌿NS
+          :If (IU≡IP)
+              ⎕←I U(↑IU)(↑IP)
+              R←R,⊂U
+          :EndIf
+     ⍝:If ((IU∩IP)≡IU)
+          :If ((⍴(IU∩IP))≥0.5×⍴IU)
+              D←(⍴IP)-(⍴IU)
+              :If D<L
+                  L←D
+                  M←U
+                  ⎕←L M(↑IU)(↑IP)
+              :EndIf
+         ⍝⎕←I U(↑IU)(↑IP)
+          :EndIf
+          I←I-1
+          :If 0=1000|I
+              ⎕←I U
+         ⍝⎕←(↑IU)(↑IP)
+          :EndIf
+      :EndWhile
+      R←↑R
+    ∇
+    ∇ R←InPartition(J K C);B;X;N;T;O;P;I;NZ;NY;S
+ ⍝ J: Subset size (notes in chord)
+ ⍝ K: Set size (scale size)
+ ⍝ C: Chord in coordinate representation
+ ⍝ Initial test of 3D Tetrahedron partition bisection
+ ⍝ to identify unique 4 note chord inversions
+⍝ Bisect
+      B←{(1⊃⍵)+((2⊃⍵)-(1⊃⍵))÷2}
+⍝ Cross Product
+ ⍝X←{((1⌽⍺)×(¯1⌽⍵))-(¯1⌽⍺)×(1⌽⍵)}
+      X←{((1⌽⍵[1;])×(¯1⌽⍵[2;]))-(¯1⌽⍵[1;])×(1⌽⍵[2;])}
+⍝ Normal
+ ⍝N←{((2⊃⍵)-(1⊃⍵))X((3⊃⍵)-(1⊃⍵))}
+      N←{GXProduct↑((2⊃⍵)-(1⊃⍵))((3⊃⍵)-(1⊃⍵))}
+⍝ Unit Vector
+ ⍝U←{⍵÷*∘(1÷⍴⍵)+/*∘(⍴⍵)|⍵}
+⍝ Plane: Point and Normal
+      P←{(⊂1⊃⍵),⊂N(1⊃⍵)(2⊃⍵)(3⊃⍵)}
+⍝ Combination Volume
+⍝ 3D: Right angled tetrahedron
+⍝ R4: 4D 5 Cell Polytope
+⍝ Rn: nD n+1 Cell Polytope
+      O←2 3 4 ⍝ Origin 3D
+      S←K-J ⍝ Volume Size
+      T←⊂O+S×0 0 0 ⍝ Vertex 1
+      T←T,⊂O+S×0 0 1 ⍝ Vertex 2
+      T←T,⊂O+S×0 1 1 ⍝ Vertex 3
+      T←T,⊂O+S×1 1 1 ⍝ Vertex 4
+ ⍝ Rn Right Angled Polytope Vertex
+ ⍝ 4D
+ ⍝ {(⊂1+⍳⍵)+(K-J)×↓0⍪⊖∘.≤⍨⍳⍵}4
+⍝ Isomorph Partition Volume
+⍝ 3D: 4 planes bisect Tetrahedron
+⍝ 4D: 5 hyperplanes bisect 5 Cell Polytope
+      NZ←0 0 ¯1 ⍝ Nudge Factor
+      NY←0 ¯1 0
+      I←⊂P(1⊃T)(3⊃T)(2⊃T) ⍝ Plane 1 is unnecessary
+      I←I,⊂P(1⊃T)(2⊃T)(B(3⊃T)(4⊃T))
+      I←I,⊂P((-NY)+1⊃T)(B(2⊃T)(4⊃T))(NY+3⊃T)
+      I←I,⊂P(B(1⊃T)(4⊃T))(NZ+2⊃T)(NZ+3⊃T)
+⍝ Test point against all planes
+⍝ (C-P1p).P1n≥0 ^ (C-P2p).P2n≥0 ^ (C-P3p).P3n≥0 ^ (C-P4p).P4n≥0
+      R←∧/{0≤(C-(1⊃⍵))+.×(2⊃⍵)}¨I
+    ∇
+    ∇ R←InPartition4D(J K C U);B;D;HPN;HV;N;NX;NY;NZ;NW;O;P;S;T;X;U
+⍝ J: Subset size (notes in chord)
+⍝ K: Set size (scale size)
+⍝ C: Chord in coordinate representation
+⍝ U: Perturbation Matrix
+⍝ Generalised to Rn Space
+⍝ Dimensions
+      D←J-1
+⍝ Bisect
+      B←{(1⊃⍵)+((2⊃⍵)-(1⊃⍵))÷2}
+⍝ Combination Volume
+⍝ 3D: Right angled Tetrahedron
+⍝ 4D: Right angled 5 Cell Polytope, Simplex, Pentatope, Pentachoron
+⍝ Rn: Right angled n+1 Cell Polytope
+⍝ Construct Right Angled Polytope Vertices as unit vectors scaled to volume size
+      T←{(⊂1+⍳⍵)+(K-J)×↓0⍪⊖∘.≤⍨⍳⍵}D
+⍝ Duplicate Vertices so that each plane can have independant nudge factors
+      T←D(D+1)⍴T
+ ⍝ 3D Nudges
+⍝  NZ←⊂0 0 1
+⍝  NY←⊂0 1 0
+⍝  T[2;2]←T[2;2]-NZ ⍝ Plane 2
+⍝  T[2;3]←T[2;3]-NZ
+⍝  T[3;3]←T[3;3]-NY ⍝ Plane 3
+⍝  T[3;1]←T[3;1]+NY
+ ⍝ 4D Nudges
+      NX←⊂1 0 0 0
+      NY←⊂0 1 0 0
+      NZ←⊂0 0 1 0
+      NW←⊂0 0 0 1
+⍝ NoteSetsFR 5 7 T[;1 2 3]
+⍝   0 ¯1  0 ¯1  0 ¯1  1 ¯1 ¯1 ¯1 ¯1  0
+⍝  ¯1 ¯1  0  1  0  1 ¯1  0  0  1 ¯1 ¯1
+⍝  ¯1 ¯1  0  1  0  1 ¯1 ¯1  0  1 ¯1 ¯1
+⍝  ¯1 ¯1  0  1 ¯1  1 ¯1  0  0  1 ¯1 ¯1
+⍝  ¯1 ¯1  0  1 ¯1  0 ¯1  0  0  1 ¯1 ¯1
+⍝  ¯1 ¯1 ¯1  1  1  1 ¯1 ¯1  0  1 ¯1 ¯1
+⍝  ¯1 ¯1 ¯1  1  1  0 ¯1 ¯1  0  1 ¯1 ¯1
+⍝  NoteSetsFR 5 7 T[;1 2 5]
+⍝ ┌→───────────────────────────────┐
+⍝ ↓ 1  1 ¯1  0 1  0 1  0 ¯1  1 ¯1 1│
+⍝ │ 1  1 ¯1  0 1 ¯1 1  0 ¯1 ¯1 ¯1 1│
+⍝ │ 1  1 ¯1 ¯1 1  0 1 ¯1 ¯1  1 ¯1 0│
+⍝ │ 1  1 ¯1 ¯1 1 ¯1 1 ¯1 ¯1  1 ¯1 0│
+⍝ │ 1  1 ¯1 ¯1 1 ¯1 1 ¯1 ¯1 ¯1 ¯1 0│
+⍝ │ 1  0 ¯1  0 1 ¯1 1  0 ¯1  1 ¯1 1│
+⍝ │ 1  0 ¯1  0 1 ¯1 1  0 ¯1  0 ¯1 1│
+⍝ │ 1  0 ¯1 ¯1 1 ¯1 1 ¯1 ¯1  1 ¯1 0│
+⍝ │ 1  0 ¯1 ¯1 1 ¯1 1 ¯1 ¯1 ¯1 ¯1 0│
+⍝ │ 1 ¯1 ¯1  0 1 ¯1 1  0 ¯1  1 ¯1 1│
+⍝ │ 1 ¯1 ¯1 ¯1 1 ¯1 1 ¯1 ¯1  0 ¯1 0│
+⍝ │ 0  1  0  0 1 ¯1 1  0 ¯1  0 ¯1 1│
+⍝ │ 0  1  0  0 1 ¯1 1 ¯1 ¯1  1 ¯1 0│
+⍝ │ 0  1 ¯1 ¯1 1  1 1 ¯1  0  1 ¯1 0│
+⍝ │ 0  1 ¯1 ¯1 1  1 0 ¯1 ¯1  1 ¯1 1│
+⍝ │ 0  1 ¯1 ¯1 1  0 1 ¯1  0  1 ¯1 0│
+⍝ │ 0  1 ¯1 ¯1 1  0 1 ¯1 ¯1  1 ¯1 1│
+⍝ │ 0  1 ¯1 ¯1 1  0 0 ¯1 ¯1  1 ¯1 1│
+⍝ │ 0  1 ¯1 ¯1 1 ¯1 1 ¯1  0  0 ¯1 0│
+⍝ │ 0  1 ¯1 ¯1 1 ¯1 1 ¯1  0 ¯1 ¯1 0│
+⍝ │ 0  1 ¯1 ¯1 1 ¯1 1 ¯1 ¯1  1  0 1│
+⍝ │ 0  1 ¯1 ¯1 1 ¯1 1 ¯1 ¯1 ¯1 ¯1 1│
+⍝ │ 0  1 ¯1 ¯1 1 ¯1 0 ¯1 ¯1 ¯1 ¯1 1│
+⍝ │ 0  0 ¯1 ¯1 1 ¯1 1 ¯1  0  1 ¯1 0│
+⍝ │ 0  0 ¯1 ¯1 1 ¯1 1 ¯1  0 ¯1 ¯1 0│
+⍝ │ 0  0 ¯1 ¯1 1 ¯1 1 ¯1 ¯1  0 ¯1 1│
+⍝ │¯1  0  0 ¯1 1  0 1 ¯1  0  1 ¯1 1│
+⍝ └~───────────────────────────────┘
+⍝ NoteSetsFR 5 8 T[1;1 2 3]
+⍝ 9  1 0 1 1 1 1 ¯1 ¯1 0 0 ¯1 ¯1
+⍝ NoteSetsFR 5 8 T[1;4 5]
+⍝ 4  0 1 1 ¯1 ¯1 1 ¯1 ¯1
+⍝ NoteSetsFR 5 8 T[2;1 2 3]
+⍝ 3  1 1 ¯1 1 1 0 0 0 ¯1 1 ¯1 1
+⍝ NoteSetsFR 5 8 T[2;4 5]
+⍝ 3  1 ¯1 1 1 1 ¯1 1 ¯1
+⍝ NoteSetsFR 5 8 T[3;1 2 3]
+⍝ ┌→────────────────────────────────┐
+⍝ ↓1  1  0 1  1  1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │1  1  0 1  0  1  1  1 ¯1 ¯1  0 ¯1│
+⍝ │1  1  0 1  0  1 ¯1 ¯1 ¯1 ¯1  0 ¯1│
+⍝ │1  1  0 1  0  0 ¯1 ¯1 ¯1 ¯1  0 ¯1│
+⍝ │1  1  0 1  0 ¯1 ¯1 ¯1 ¯1 ¯1  0 ¯1│
+⍝ │1  0  0 1  0  0 ¯1 ¯1 ¯1 ¯1  0 ¯1│
+⍝ │1  0  0 1  0 ¯1 ¯1 ¯1 ¯1 ¯1  0 ¯1│
+⍝ │1 ¯1  0 1  1  1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │1 ¯1  0 1  0 ¯1 ¯1 ¯1 ¯1 ¯1  0 ¯1│
+⍝ │1 ¯1 ¯1 1 ¯1  1 ¯1  0  0  0 ¯1 ¯1│
+⍝ │1 ¯1 ¯1 1 ¯1  0 ¯1  0  0  0 ¯1 ¯1│
+⍝ │1 ¯1 ¯1 1 ¯1 ¯1 ¯1  0  0  0 ¯1 ¯1│
+⍝ │0  1  1 1  1  1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0  1  1 1  1  0 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0  1  0 0  1  1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0  0  1 1  1  0 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0  0  1 1  1 ¯1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0  0  0 0  1  1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0  0  0 0  1  0 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0  0  0 0  1 ¯1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0  0  0 0  0  1 ¯1 ¯1 ¯1 ¯1  0 ¯1│
+⍝ │0  0  0 0 ¯1  1  1  0 ¯1 ¯1  0 ¯1│
+⍝ │0  0  0 0 ¯1  0  1  0 ¯1 ¯1  0 ¯1│
+⍝ │0  0  0 0 ¯1 ¯1  1  0 ¯1 ¯1  0 ¯1│
+⍝ │0 ¯1  1 1  1  1 ¯1  0 ¯1  0  0 ¯1│
+⍝ │0 ¯1  1 1  1  1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0 ¯1  1 1  1  0 ¯1  0 ¯1  0  0 ¯1│
+⍝ │0 ¯1  1 1  1  0 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0 ¯1  1 1  1 ¯1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0 ¯1  0 0  1  1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0 ¯1  0 0  1  0 ¯1  0 ¯1  0  0 ¯1│
+⍝ │0 ¯1  0 0  1  0 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0 ¯1  0 0  1 ¯1 ¯1  0 ¯1 ¯1  0 ¯1│
+⍝ │0 ¯1  0 0 ¯1  1  1  0 ¯1 ¯1  0 ¯1│
+⍝ └~────────────────────────────────┘
+⍝ NoteSetsFR 5 9 T[1;1 2 3]
+⍝ 23  1 1 1 0 0 0 1 0 0 0 ¯1 0
+⍝ NoteSetsFR 5 9 T[1;4 5]
+⍝ 21  ¯1 1 1 1 ¯1 1 1 1
+⍝ NoteSetsFR 5 9 T[1;4 5] with T[1;1 2 3]
+⍝ 16  ¯1 1 1 1 ¯1 0 0 0
+⍝ NoteSetsFR 5 9 T[1;2 3] with T[1;1 4 5]
+⍝ 16  0 1 1 1 0 1 1 1
+⍝ NoteSetsFR 5 9 T[1;1 4] with T[1;2 3 5]
+⍝ 16  1 1 1 0 ¯1 1 1 1
+⍝ NoteSetsFR 5 9 T[2;1 2 3] with T[1;1 2 3 4 5]
+⍝ 11  ¯1 1 ¯1 1 1 ¯1 1 0 ¯1 1 ¯1 1
+⍝ NoteSetsFR 5 9 T[2;4 5] with T[1;1 2 3 4 5] T[2;1 2 3]
+⍝ 4  ¯1 ¯1 0 ¯1 ¯1 ¯1 0 ¯1
+⍝ NoteSetsFR 5 9 T[3;1 2 3] with T[1;1 2 3 4 5] T[2;1 2 3 4 5]
+⍝ 2  1 ¯1 ¯1 1 ¯1 ¯1 0 1 1 1 0 ¯1
+⍝ NoteSetsFR 5 9 T[3;4 5] with T[1;1 2 3 4 5] T[2;1 2 3 4 5] T[3;1 2 3]
+⍝ 1  0 ¯1 1 1 ¯1 ¯1 1 1
+⍝ NoteSetsFR 5 9 T[4;1 2 3] with T[1;1 2 3 4 5] T[2;1 2 3 4 5] T[3;1 2 3 4 5]
+⍝ 1  ¯1 1 ¯1 1 1 1 1 ¯1 ¯1 1 ¯1 1
+⍝ NoteSetsFR 5 9 T[4;4 5] with T[1;1 2 3 4 5] T[2;1 2 3 4 5] T[3;1 2 3 4 5] T[4;1 2 3]
+⍝ Many Results
+⍝ NoteSetsFR 5 10 T[1;1 2 3]
+⍝ 42  1 1 1 0 0 0 1 ¯1 0 0 1 ¯1
+⍝ NoteSetsFR 5 10 T[1;4 5] with T[1;1 2 3]
+⍝ 41  1 1 ¯1 1 ¯1 0 ¯1 1
+⍝ NoteSetsFR 5 10 T[2;1 2 3] with T[1;1 2 3 4 5]
+⍝ 41  ¯1 1 ¯1 1 1 ¯1 1 ¯1 ¯1 1 ¯1 1
+⍝ NoteSetsFR 5 10 T[2;4 5] with T[1;1 2 3 4 5] T[2;1 2 3]
+⍝ 21  1 0 0 ¯1 0 1 ¯1 ¯1
+⍝ NoteSetsFR 5 10 T[3;1 2 3] with T[1;1 2 3 4 5] T[2;1 2 3 4 5]
+⍝ 8  1 1 ¯1 0 ¯1 1 1 0 ¯1 ¯1 0 ¯1
+⍝ NoteSetsFR 5 10 T[3;4 5] with T[1;1 2 3 4 5] T[2;1 2 3 4 5] T[3;1 2 3]
+⍝ 7  1 1 0 1 0 1 0 0
+⍝ NoteSetsFR 5 10 T[4;1 2 3] with T[1;1 2 3 4 5] T[2;1 2 3 4 5] T[3;1 2 3 4 5]
+⍝ None
+⍝ NoteSetsFR 5 10 T[4;4 5] with T[1;1 2 3 4 5] T[2;1 2 3 4 5] T[3;1 2 3 4 5]
+⍝ None
+⍝ NoteSetsFR 5 10 T[4;3 4 5]
+⍝ 24  ¯1 1 ¯1 1 1 ¯1 1 1 ¯1 1 ¯1 1
+⍝ NoteSetsFR 5 10 T[4;1 2 3]
+⍝ 39  ¯1 ¯1 1 1 ¯1 1 ¯1 1 1 1 ¯1 ¯1
+⍝ NoteSetsFR 5 10 T[4;1 2] with T[4;3 4 5]
+⍝ 16  ¯1 1 ¯1 1 1 0 0 ¯1
+⍝ NoteSetsFR 5 10 T[3;4 5] with T[4;1 2 3 4 5]
+⍝ 4  1 0 ¯1 1 1 1 1 0
+⍝  T[1;1]←T[1;1]+⊂1 1 1 0⍝U[1 2 3 4] ⍝ Plane 1
+⍝  T[1;2]←T[1;2]+⊂0 0 1 ¯1⍝U[5 6 7 8]
+⍝  T[1;3]←T[1;3]+⊂0 0 1 ¯1⍝U[9 10 11 12]
+⍝  T[1;4]←T[1;4]+⊂1 1 ¯1 1⍝U[1 2 3 4]
+⍝  T[1;5]←T[1;5]+⊂¯1 0 ¯1 1⍝U[5 6 7 8]
+⍝  T[2;1]←T[2;1]+⊂¯1 1 ¯1 1⍝U[1 2 3 4] ⍝ Plane 2
+⍝  T[2;2]←T[2;2]+⊂1 ¯1 1 ¯1⍝U[5 6 7 8]
+⍝  T[2;3]←T[2;3]+⊂¯1 1 ¯1 1⍝U[9 10 11 12]
+⍝  T[2;4]←T[2;4]+⊂1 0 0 ¯1⍝U[1 2 3 4]
+⍝  T[2;5]←T[2;5]+⊂0 1 ¯1 ¯1⍝U[5 6 7 8]
+⍝  T[3;1]←T[3;1]+⊂1 1 ¯1 0⍝U[1 2 3 4] ⍝ Plane 3
+⍝  T[3;2]←T[3;2]+⊂¯1 1 1 0⍝U[5 6 7 8]
+⍝  T[3;3]←T[3;3]+⊂¯1 ¯1 0 ¯1⍝U[9 10 11 12]
+      T[3;4]←T[3;4]+⊂U[1 2 3 4]
+      T[3;5]←T[3;5]+⊂U[5 6 7 8]
+      T[4;1]←T[4;1]+⊂¯1 1 ¯1 1⍝U[1 2 3 4] ⍝ Plane 4
+      T[4;2]←T[4;2]+⊂1 0 0 ¯1⍝U[5 6 7 8]
+      T[4;3]←T[4;3]+⊂¯1 1 ¯1 1⍝U[9 10 11 12]
+      T[4;4]←T[4;4]+⊂1 ¯1 1 1⍝U[5 6 7 8]
+      T[4;5]←T[4;5]+⊂¯1 1 ¯1 1⍝U[9 10 11 12]
+⍝ Isomorph Partition Volume
+⍝ 3D: 3 planes bisect Tetrahedron
+⍝ 4D: 4 hyperplanes bisect 5 Cell Polytope
+⍝ Hyperplanes: Vertices
+      HV←{(¯1↓(⍵-1)⌽T[⍵;⍳D]),B(T[⍵;⍵⊃(¯1⌽⍳D)])(T[⍵;D+1])}¨⍳D
+⍝ Hyperplanes: Point and Normal
+      HPN←{⍵[1],⊂GXProduct↑⍵[1+⍳(D-1)]-⍵[1]}¨HV
+⍝ Point inside all hyperslices
+ ⍝R←∧/{0≤(C-(1⊃⍵))+.×(2⊃⍵)}¨HPN
+      R←∧/{0≤(C-(1⊃⍵))+.×(2⊃⍵)}¨(HPN[3 4])
+ ⍝ Conjecture Test: Alternating hyperplane normal orientation check
+ ⍝R←{(C-(1⊃⍵))+.×(2⊃⍵)}¨HPN
+ ⍝R←∧/(0≤R[⍸2|⍳D]),(0≤R[⍸1-2|⍳D])
+ ⍝R←∧/(0≥R[⍸2|⍳D]),(0≥R[⍸1-2|⍳D])
+    ∇
+    ∇ R←VerifyInPartition(S T);NS;A;B
+      NS←NoteSetsFR S T
+      A←↓IsomorphUnique 1(NS)
+      B←↓({InPartition(S T(1↓⍸⍵))}¨↓NS)⌿NS
+      R←(A∩B)≡(A∪B)
+    ∇
+    ∇ R←VerifyInPartition4D(S T);NS;A;B
+      NS←NoteSetsFR S T
+      A←↓IsomorphUnique 1(NS)
+      B←↓({InPartition4D(S T(1↓⍸⍵))}¨↓NS)⌿NS
+      R←(A∩B)≡(A∪B)
+    ∇
+    ∇ R←GXProduct V;N;B;S
+⍝ V: Array of N-1 N-Dimensional Vectors
+      N←2⊃⍴V
+⍝ Canonical Basis
+      B←{↑(⍵⍴1 ¯1)×↓(∘.=⍨⍳⍵)}N
+⍝ Sub Array
+      S←{V[;(⍳N)~⍵]}
+⍝ Laplace Expansion
+      R←⊃+/{B[⍵;]×det V S ⍵}¨⍳N
+    ∇
+      det←{⎕IO ⎕ML←0 1            ⍝ Determinant of square matrix.
+          ⍺←1                     ⍝ product of co-factor coefficients so far
+          0=n←≢⍵:⍺                ⍝ result for 0-by-0
+          i j←(⍴⍵)⊤{⍵⍳⌈/⍵}|,⍵     ⍝ row and column index of maximal element
+          k←⍳n
+          (⍺×⍵[i;j]×¯1*i+j)∇ ⍵[k~i;k~j]-⍵[k~i;j]∘.×⍵[i;k~j]÷⍵[i;j]
+      }
+:EndNamespace
+

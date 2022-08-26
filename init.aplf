@@ -1,0 +1,7 @@
+ init
+ Chord.Definitions
+ ⎕PW←200
+ ⎕←']boxing -fns=on'
+ ⎕←']rows -fold=9'
+ ⎕←']boxing on -style=min'
+ ⎕←']boxing on -style=max'

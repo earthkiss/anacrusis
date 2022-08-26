@@ -1,0 +1,158 @@
+:Namespace Prof
+    :Section Auxiliaries
+    ⍝ GraphViz formatting
+    gvX←{'(',(⍕⍵),')'}                    ⍝ Brackets
+    gvW←{'"',(⍕⍵),'"'}                    ⍝ Quotes
+    gvQ←{⊂gvW(gvX 2↑⍵),⍕3⊃⍵}              ⍝ Node
+    gvO←gvW                               ⍝ Terminal node
+    gvC←{(gvO ⍵),'[fillcolor=lightgray]'} ⍝ Coloured terminal node
+    gvL←{⍺,'[label="{',⍵,'}"]'}           ⍝ Label record node
+    gvV←{⍺,' -> ',⍵}                      ⍝ Directed edge
+    gvI←{⍺,' -- ',⍵}                      ⍝ Undirected edge
+    ∇ R←T gvText W;L;F
+    ⍝ Format vector T to width W for Graphviz labels
+      :If 2=⍴⍴T ⋄ T←↓T ⋄ :Else ⋄ T←,T ⋄ :EndIf ⍝ Handle matrices
+      R←''
+      :While 0≠⍴T                            ⍝ Iterate over vector
+          L←''
+          :While (W≥⍴L,(F←#.Utils.flatten⊃1↑T))∧0≠⍴T ⍝ and flatten each element
+              L,←F,', '
+            ⍝   L,←'(',F,')'
+              T←1↓T
+          :EndWhile
+          R,←(¯2↓L),'\n'                     ⍝ Drop last ', '
+        ⍝   R,←L,'\n'
+      :EndWhile
+      R←¯2↓R                                 ⍝ Drop last '\n'
+    ∇
+    :EndSection
+
+    ∇ R←traceOLD C;Al;Ns;Fn;Om;D;monitor
+    ⍝ Record call args and return values
+      monitor←{⍺←⊣
+          ⍙←⍺⍺ ⋄ F←~∘' ⍙'⍕⊂⎕OR'⍙'
+          #.NS.T,←'→',⊂(⊂F),(⍺),(⊂⍵)
+          R←⍺ ⍺⍺ ⍵
+          #.NS.T,←'←',(⊂R)
+          R}
+      Al Ns Fn Om←#.Utils.cmdParts C
+      D←D[⍸3⍷∊{⎕NC(Ns),⍵}¨D←↓⎕REFS Ns,Fn]  ⍝ Dependencies
+      {'#.NS'⎕NS(Ns),⍵}¨D               ⍝ Copy functions
+      {⍎'#.NS.',⍵,'←(⎕OR''#.NS.',⍵,''') monitor'}¨D ⍝ Inject monitors
+      #.NS.T←''                         ⍝ Zero trace
+      R←⍎Al,'#.NS.',Fn,' ',Om           ⍝ Go!
+      R←#.NS.T
+      ⎕EX'#.NS'
+    ∇
+    ∇ R←trace C;TNS;Al;Ns;Fn;Om;D;mon
+    ⍝ Record call args and return values
+      mon←{⍺←⊣
+          ⍙←⍺⍺ ⋄ F←~∘' ⍙'⍕⊂⎕OR'⍙'
+          TempdwaL,←'→',⊂(⊂F),(⍺),(⊂⍵)
+          R←⍺ ⍺⍺ ⍵
+          TempdwaL,←'←',(⊂R)
+          R}
+      Al Ns Fn Om←#.Utils.cmdParts C
+      D←D[⍸3⍷∊{⎕NC(Ns),⍵}¨D←↓⎕REFS Ns,Fn]     ⍝ Dependencies
+      TNS←⎕NS{Ns,⍵,' '}¨D                     ⍝ Copy functions
+      {⍎'TNS.',⍵,'←(⎕OR''TNS.',⍵,''') mon'}¨D ⍝ Inject monitors
+      TNS.TempdwaL←''                         ⍝ Zero trace
+      R←⍎Al,'TNS.',Fn,' ',Om                  ⍝ Go!
+      R←TNS.TempdwaL
+    ∇
+    ∇ R←gvCallGraph N;T;E;S;TS;G;C;F;A;W;M;event
+    ⍝ Create graphViz graph from call trace
+      T←trace N
+      E←(1+⊃∨/⍷∘T¨('→' '←'))⊆T          ⍝ Seperate call and return events
+      event←{⊂(1↓⍵⊃E),⊂gvX ⍵}           ⍝ (args,time stamp)
+      ⍝ Build graph by recreating stack behaviour
+      S←,event 1                        ⍝ Push initial call
+      TS←2                              ⍝ Time stamp
+      G←''
+      :While 0≠⍴S
+          :Select (TS 1)⊃E
+          :Case '→' ⍝ Call
+              S,←event TS               ⍝ Push call
+            ⍝   #.display ¯2↑S
+            ⍝   #.display,/¨¯2↑S
+            ⍝   #.display⊃¨,/¨¯2↑S
+            ⍝   #.display gvW¨⊃¨,/¨¯2↑S
+              G,←gvV/gvW¨⊃¨,/¨¯2↑S      ⍝ New call edge
+            ⍝   #.display'Call'S G
+          :Case '←' ⍝ Return
+              C←⊃¯1↑S ⋄ S←¯1↓S          ⍝ Pop Caller
+              F←⊃⊃C                     ⍝ Function
+              A←¯1↓1↓⊃C                 ⍝ Alpha
+              W←⊃¯1↑⊃C                  ⍝ Omega
+              M←⊃(1↓TS⊃E)               ⍝ Result
+              G,←⊂(gvW⊃,/C)gvL F,'|{',(#.Utils.decompile A),'|',(#.Utils.decompile W),'}|',M gvText 60 ⍝ Label (args,result)
+            ⍝   #.display'Return'C F A W M G
+          :EndSelect
+          TS←TS+1
+      :EndWhile
+      R←G
+ ⍝ 'Fib'Trace 6
+ ⍝  E  TS   S                             G
+ ⍝ →6  1    6(1)
+ ⍝ →4  2    6(1) 4(2)                     6(1)->4(2)
+ ⍝ →2  3    6(1) 4(2) 2(3)                4(2)->2(3)
+ ⍝ ←1  4    6(1) 4(2)                     2(3) '2|1'    T
+ ⍝ →3  5    6(1) 4(2) 3(5)                4(2)->3(5)
+ ⍝ →1  6    6(1) 4(2) 3(5) 1(6)           3(5)->1(6)
+ ⍝ ←1  7    6(1) 4(2) 3(5)                1(6) '1|1'    T
+ ⍝ →2  8    6(1) 4(2) 3(5) 2(8)           3(5)->2(8)
+ ⍝ ←1  9    6(1) 4(2) 3(5)                2(8) '2|1'    T
+ ⍝ ←2  10   6(1) 4(2)                     3(5) '3|2'
+ ⍝ ←3  11   6(1)                          4(2) '4|3'
+ ⍝ →5  12   6(1) 5(12)                    6(1)->5(12)
+ ⍝ →3  13   6(1) 5(12) 3(13)              5(12)->3(13)
+ ⍝ →1  14   6(1) 5(12) 3(13) 1(14)        3(13)->1(14)
+ ⍝ ←1  15   6(1) 5(12) 3(13)              1(14) '1|1'   T
+ ⍝ →2  16   6(1) 5(12) 3(13) 2(16)        3(13)->2(16)
+ ⍝ ←1  17   6(1) 5(12) 3(13)              2(16) '2|1'   T
+ ⍝ ←2  18   6(1) 5(12)                    3(13) '3|2'
+ ⍝ →4  19   6(1) 5(12) 4(19)              5(12)->4(19)
+ ⍝ →2  20   6(1) 5(12) 4(19) 2(20)        4(19)->2(20)
+ ⍝ ←1  21   6(1) 5(12) 4(19)              2(20) '2|1'   T
+ ⍝ →3  22   6(1) 5(12) 4(19) 3(22)        4(19)->3(22)
+ ⍝ →1  23   6(1) 5(12) 4(19) 3(22) 1(23)  3(22)->1(23)
+ ⍝ ←1  24   6(1) 5(12) 4(19) 3(22)        1(23) '1|1'   T
+ ⍝ →2  25   6(1) 5(12) 4(19) 3(22) 2(25)  3(22)->2(25)
+ ⍝ ←1  26   6(1) 5(12) 4(19) 3(22)        2(25) '2|1'   T
+ ⍝ ←2  27   6(1) 5(12) 4(19)              3(22) '3|2'
+ ⍝ ←3  28   6(1) 5(12)                    4(19) '4|3'
+ ⍝ ←5  29   6(1)                          5(12) '5|5'
+ ⍝ ←8  30                                 6(1) '6|8'
+    ∇
+    ∇ gvSaveCallGraph N;E;G;D;V;P
+      E←gvCallGraph N
+      G←⊂'DiGraph "',N,'"{'
+      G,←⊂'margin=0'
+      G,←⊂'splines=true'
+      G,←⊂'fontname="cmr10"'
+      G,←⊂'fontsize=10'
+      G,←⊂'labelloc="t"'
+      G,←⊂'label="',N,'"'
+    ⍝   G,←⊂'node [shape=octagon, regular=false, orientation=22.5]'
+    ⍝   G,←⊂'node [shape=rectangle]'
+      G,←⊂'node [shape=record]'
+      G,←⊂'node [fillcolor=white]'
+      G,←⊂'node [style="filled"]'
+      G,←⊂'node [penwidth=0.5]'
+    ⍝   G,←⊂'node [fixedsize=true]'
+      G,←⊂'node [width=0.0, height=0.0]' ⍝ Minimum size
+      G,←⊂'node [margin="0.05,0.05"]'
+      G,←⊂'node [fontname="cmr10"]'
+      G,←⊂'node [fontsize=10]'
+      G,←⊂'edge [penwidth=0.25]'
+      G,←⊂'edge [concentrators=true]'
+      G,←⊂'edge [arrowhead=open]'
+      G,←E
+      G,←⊂,'}'
+      D←'/home/john/Jazz Lore/Chords/trace/'
+      V←N,'.gv'
+      P←N,'.pdf'
+      (,/{⍵,⎕UCS 13}¨G)⎕NPUT(D,V)1
+      ⎕SH'dot -Tpdf "',D,V,'" > "',D,P,'"'
+    ∇
+:EndNamespace

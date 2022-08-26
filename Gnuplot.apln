@@ -1,0 +1,62 @@
+:Namespace Gnuplot
+    ∇ gpf2pal N;Files
+ ⍝ Convert all gnuplot gpf files to gnuplot pal
+ ⍝    Blend palette across N line styles
+ ⍝ gpf: Defined palette
+ ⍝ pal: Line style colour definitions, defined palette
+      Files←⊃(⎕NINFO⍠('Recurse' 1)('Wildcard' 1))'Jazz Lore/Chords/gnuplot/*.gpf'
+      {
+          I←⎕NGET ⍵ 1
+          Lines←1⊃I
+          Lines←({'#'≠⊃⍵}¨Lines)/Lines   ⍝ Remove comments
+          LSN←N
+          LS←LSN pd2ls⍎¨Lines
+          LS←{'set style line ',(⍕⍵),' lt 1 lc rgb ',⍕⍵⊃LS}¨⍳LSN
+     ⍝MC←⊂'set palette maxcolors ',⍕⍴Lines
+          PD←(⊂'set palette defined (\'),(¯1↓{⍵,',\'}¨Lines),⊂(⊃¯1↑Lines),')'
+          O←({(¯1↑⍸'.'⍷⍵)↑⍵}⍵),'pal'
+          (⊂LS,PD)⎕NPUT O 1
+     ⍝(⊂LS,MC,PD)⎕NPUT O 1
+     ⍝(LS)(PD)
+      }¨Files
+    ∇
+    ∇ R←LSN pd2ls PD;rgb3ftoi;blend;PP;PPC;LS;LSPP;LSP;LSPF;LSC
+ ⍝ Blend gnuplot palette defined to line style range
+ ⍝   Palette defined: variable sized colour partitions
+ ⍝   Line style range: fixed size colour partitions
+ ⍝ Normalised rgb to integer
+      rgb3ftoi←{+/(65536 256 1)×⌊255×⍵}
+ ⍝ Linear colour mix
+      blend←{rgb3ftoi((1-⍺)×1↓⊃PD[⍵])+(⍺×1↓⊃PD[⍵+1])}
+ ⍝ Palette defined
+ ⍝   (2.0 0.0 0.0 0.0)
+ ⍝   (2.2 0.2 0.2 0.2)
+ ⍝   (2.7 0.3 0.3 0.3)
+ ⍝   (2.9 0.4 0.4 0.4)
+ ⍝   (3.1 1.0 1.0 1.0)
+ ⍝                        ┌──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┐
+ ⍝ Palette partitions     2     2.2            2.7   2.9   3.1
+ ⍝ Line style             1          2          3          4
+ ⍝ ls mapped to pp        2          2.36       2.73       3.1
+ ⍝ ls Partition           1          2          3          4
+ ⍝ ls Partition fraction  0          0.33       0.16       1
+ ⍝ ls colour              0       3914683    5312784    16777215
+ ⍝
+      PP←⊃¨PD ⋄ PPC←⊃⍴PP
+      LS←⍳LSN
+      LSPP←(1↑PP)+((¯1↑PP)-(1↑PP))×(LS-1)÷(LSN-1)
+      LSP←(⊃¯1↑⍸)¨↓LSPP∘.≥PP
+      LSP←(¯1↓LSP),(¯1+¯1↑LSP) ⍝ Decrement last partition
+      LSPF←{(LSPP[⍵]-PP[LSP[⍵]])÷(PP[LSP[⍵]+1]-PP[LSP[⍵]])}¨⍳LSN
+      LSC←{⌊(⊃LSPF[⍵])blend⊃LSP[⍵]}¨⍳LSN
+⍝  display'Palette defined 'PD
+⍝  display'Palette partitions 'PP
+⍝  display'PP Count 'PPC
+⍝  display'LS 'LS
+⍝  display'LSPP 'LSPP
+⍝  display'LSP 'LSP
+⍝  display'LSPF 'LSPF
+⍝  display'LSC 'LSC
+      R←LSC
+    ∇
+:EndNamespace

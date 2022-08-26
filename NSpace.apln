@@ -1,0 +1,74 @@
+:Namespace NSpace
+    ∇ R←nSpaceFold C;N;G;O;F;D;B;range;origin;part;Squash;Cube
+ ⍝ Flatten N-Space coordinates to fractal subspace
+ ⍝ (3-Space + scaled plotting cube)
+      N←3
+      range←{⊃1+(⌈/⍵)-(⌊/⍵)}                     ⍝ Range of each dimension
+      origin←{⍵-⌊/⍵}                             ⍝ Translate to origin
+      part←{(-⍺)↑¨((-⍴⍵)↑∊⍉⍺ N⍴⍳(N←⌈(⊃⍴⍵)÷⍺))⊆⍵} ⍝ Partition ⍵ by ⍺, pad
+      Squash←⊂N⍴0.75
+      Cube←⊂N⍴1
+      G←N part range C
+      O←(origin C),¨Cube
+⍝  display'Input C 'C
+⍝  display'Range G'G
+⍝  display'Origin+cube O'O
+ ⍝ Fractally collapse dimensions above N in chunks of N
+      F←1
+      :While (N×2)<⍴⊃O ⍝ (... X Y Z Cube)
+ ⍝ Fold N dimensions (... U V W X Y Z Cube) → (... X Y Z Cube)
+          D←{
+              P←N part ⍵               ⍝ Partition coordinates
+              XYZ←1↑¯2↑P               ⍝ Last N dimensions
+              UVW←1↑¯3↑P               ⍝ Last N but N dimensions
+              Range←¯1↑G
+              Frag←Squash×Range*F      ⍝ Fractal grid size
+              ⊃⌊(Frag×UVW)+XYZ         ⍝ Fold
+          }¨O
+ ⍝ Scale cube
+          B←{
+              P←N part ⍵
+              XYZ←1↑¯2↑P
+              UVW←1↑¯3↑P
+              Cube←¯1↑P
+              Range←¯1↑G
+              ⊃Cube×÷1+UVW÷Squash×Range*F ⍝ Scale by fractal distance
+          }¨O
+          G←¯1↓G
+          O←({(-N×3)↓⍵}¨O),¨(D,¨B)
+          F←F+1                        ⍝ Keep track of fold #
+    ⍝  display'UVW/XYZ D'D
+    ⍝  display'UVW/Cube B'B
+    ⍝  display'new O'O
+      :EndWhile
+ ⍝ Compare
+⍝  R←⊂Comb.nSpacePlot N↑¨O
+⍝  R,←⊂Comb.nSpacePlot C
+      R←O
+    ∇
+    ∇ R←nSpacePlot C;S
+    ⍝ Display higher dimensional coordinates as 2D fractal grid
+      S←nSpaceFill C         ⍝ Fill
+      R←S nSpaceFrag 2       ⍝ Flatten
+    ∇
+    ∇ R←nSpaceFill C;N;S
+    ⍝ Plot N-D coordinates into N-D matrix
+      N←⊃⍴⊃C                 ⍝ # dimensions
+      S←(⊃1+⌈/C-(⌊/C))⍴' '   ⍝ Range of each dimension delimits N-space
+      S←(↓⍣(N-1))S           ⍝ Vectorise for plotting
+      {(⍵⊃S)←'⎕'}¨1+C-(⌊/C)  ⍝ Plot
+      S←(↑⍣(N-1))S           ⍝ De-vectorise
+      R←S
+    ∇
+    ∇ R←M nSpaceFrag N
+    ⍝ Flatten higher dimensional matrix to N-D fractal grid
+    ⍝   R←({⊂[¯N↑⍳⍴⍴⍵]⍵}⍣(⌊(¯1+⊃⍴⍴M)÷N))M
+      R←({(⊂⍤N)⍵}⍣(⌊(¯1+⊃⍴⍴M)÷N))M
+    ∇
+    ∇ saveNSpace;C
+      C←nSpaceFold #.Comb.KCombR 4 11
+    ⍝   C←nSpaceFold⍸¨#.Chord.InversionsUnique #.Chord.NoteSetsFR 15 20⍝9 20⍝6 22
+      ⍝⍸¨#.NoteSets 6 10⍝12 16
+      (⊂⍕¨C)⎕NPUT('Jazz Lore/Chords/gnuplot/nSpaceFold.txt')1
+    ∇
+:EndNamespace

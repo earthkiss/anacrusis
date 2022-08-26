@@ -1,0 +1,581 @@
+:Namespace Comb
+    :Section Combinations
+    ∇ R←combN N
+    ⍝ All non zero subsets of {1,...,N}
+      R←⍸¨↓⍉(N⍴2)⊤⍳(2*N)-1
+    ∇
+    ∇ R←combNalt N
+    ⍝ All non zero subsets of {1,...,N}
+      R←⊃,/{combVK(⍳N)⍵}¨⍳N
+    ∇
+    ∇ R←{A}combNK(N K)
+    ⍝ Combinations of K from N
+      ⍝ Init
+      :If 0=⎕NC'A'
+          A←⍬
+          ⍝ Exit
+          :If K>N ⋄ R←,⊂,⍬ ⋄ :Return ⋄ :EndIf
+          :If K≤0 ⋄ R←,⊂,1 ⋄ :Return ⋄ :EndIf
+      :EndIf
+      ⍝ Base
+      :If K=1
+          R←{A,⍵}¨⌽⍳N
+      :ElseIf K=N
+          R←⊂A,⌽⍳N
+      ⍝ Recurse
+      :Else
+          R←⊃,/{(A,(1+N-⍵))combNK(N-⍵)(K-1)}¨⍳(1+N-K)
+      :EndIf
+⍝ Recursion pattern
+⍝
+⍝ R←{A} ∇ K N
+⍝   Init               ⍝ 1st call
+⍝     A←⍬
+⍝     Proto            ⍝ Non Recursive Bases
+⍝       K>N:R←,⊂0⍴1⊃N
+⍝       K≤0:R←,⊂,1
+⍝   Entry              ⍝ All call requirements
+⍝     ...
+⍝   Base
+⍝     K=1:R←{A,⍵}¨⍳N   ⍝ Singleton sets
+⍝     N=1:R←⊂A,K⍴⊃N    ⍝ Partial set
+⍝     K=N:R←⊂A,⌽⍳N     ⍝ Full sets
+⍝   Recurse
+⍝     t                ⍝ Take N
+⍝     r                ⍝ Reduce N
+⍝     d                ⍝ Decrement K
+⍝     b                ⍝ Branches
+⍝     R←⊃,/{(A,t ⍵)∇(r ⍵)(d ⍵)}¨⍳b
+⍝
+⍝ Recursive definition from Pascal's Triangle Hockey Stick
+⍝                             1
+⍝                          <1>   1
+⍝                         1   <2>  [1]          [] RH
+⍝                       1    3  <[3]>  1        <> LH
+⍝                     1    4   [6]  <4>   1
+⍝                   1    5    10  (10)  5    1
+⍝
+⍝       NSpace.nSpacePlot Comb.combVK(⍳5)3
+⍝ ┌→──────────────────┐
+⍝ │ ┌→──┐ ┌→──┐ ┌→──┐ │
+⍝ │ ↓⎕⎕⎕│ ↓   │ ↓   │ │
+⍝ │ │ ⎕⎕│ │ ⎕⎕│ │   │ │
+⍝ │ │  ⎕│ │  ⎕│ │  ⎕│ │
+⍝ │ └───┘ └───┘ └───┘ │
+⍝ └∊──────────────────┘
+⍝
+⍝ RH Hockey Stick Traversal
+⍝ Result accumulation right appended
+⍝ Recursion reduction from tail allows N to be integer
+⍝ Reverse ordered result with minor base case tweak
+⍝
+⍝ A ∇ N K ← (A,N ∇ N-1 K-1) , (A,N-1 ∇ N-2 K-1) , (A,N-2 ∇ N-3 K-1)
+⍝                                   ∇12345 3
+⍝                 /                     |          \
+⍝             5∇1234 2               4∇123 2    3∇⌽12 2
+⍝      /          |        \        /       \      |
+⍝  54∇⌽123 1  53∇⌽12 1  52∇1 1  43∇⌽12 1  42∇1 1  321
+⍝  |   |   |    |   |      |      |   |      |
+⍝ 543 542 541  532 531    521    432 431    421
+⍝
+⍝ RH Hockey Stick Traversal
+⍝ Result accumulation right appended
+⍝ Recursion reduction from head requires unordered vector V
+⍝ Ordered result
+⍝
+⍝ A ∇ V K ← (A,V[1] ∇ V~V[⍳1] K-1) , (A,V[2] ∇ V~V[⍳2] K-1) , (A,V[3] ∇ V-V[⍳3] K-1)
+⍝                                ∇12345 3
+⍝               /                    |           \
+⍝           1∇2345 2              2∇345 2     3∇45 2
+⍝      /        |       \        /       \       |
+⍝  12∇345 1  13∇45 1  14∇5 1  23∇45 1  24∇5 1   345
+⍝  |   |  |   |   |     |      |   |     |
+⍝ 123 124 125 134 135  145    234 235   245
+⍝
+⍝ LH Hockey Stick Traversal
+⍝ Result accumulation left appended
+⍝ Recursion reduction from tail allows N to be integer
+⍝ Unordered result
+⍝
+⍝                                                  ∇12345 3
+⍝                /                           /                   \             \
+⍝             ∇1234 3                     5∇123 2              45∇12 1      345∇1 0
+⍝    /       |       |       \       /       |       \        /       \        |
+⍝ ∇123 3  4∇12 2  34∇1 1  234∇0 0  5∇12 2  35∇1 1  235∇0 0  45∇1 1  245∇0 0   345
+⍝    |       |       |       |       |       |       |        |       |
+⍝   123     124     134     234     125     135     235      145     245
+⍝
+⍝ LH Hockey Stick Traversal
+⍝ Result accumulation right appended
+⍝ Recursion reduction from head requires unordered vector V
+⍝ Reverse ordered result
+⍝
+⍝                                                    ∇12345 3
+⍝                /                            /                   \            \
+⍝             ∇3 2345                      1∇345 2              12∇45 1     123∇5 0
+⍝    /       |       |       \        /       |       \        /       \       |
+⍝ ∇345 3  2∇45 2  23∇5 1  234∇0 0  1∇45 2  13∇5 1  134∇0 0  12∇5 1  124∇0 0   123
+⍝    |       |       |       |        |       |       |        |       |
+⍝   345     245     235     234      145     135     134      125     124
+⍝
+    ∇
+    ∇ R←cNK(N K)
+    ⍝ Hindsight recurence relation discovery
+    ⍝   Solve small subset of problems
+    ⍝   Identify subsolution synthesis across solutions
+    ⍝   Implement trivially with pattern blitting
+      ⍝ Exit
+      :If K>N ⋄ R←0 K⍴⍬ ⋄ :Return ⋄ :EndIf
+      :If K≤0 ⋄ R←1 1⍴1 ⋄ :Return ⋄ :EndIf
+      ⍝ Base
+      :If K=1
+          R←N 1⍴⍳N
+      :ElseIf K=N
+          R←1 N⍴⍳N
+      ⍝ Recurse
+      :Else
+          R←(cNK(N-1)K)⍪(cNK(N-1)(K-1)),N
+      :EndIf
+    ∇
+    ∇ R←{A}combVK(V K)
+    ⍝ Combinations of K from Vector V
+      ⍝ Init
+      :If 0=⎕NC'A' ⋄ A←⍬ ⋄ :EndIf
+      ⍝ Exit
+      :If K>⍴V ⋄ R←0⍴⊂0↑V ⋄ :Return ⋄ :EndIf
+      :If K≤0 ⋄ R←,⊂1↑V ⋄ :Return ⋄ :EndIf
+      ⍝ Base
+      :If K=1
+          R←{A,⊂⍵}¨V
+      :ElseIf K=⍴V
+          R←⊂A,V
+      ⍝ Recurse
+      :Else
+          R←⊃,/{(A,V[⍵])combVK(V~V[⍳⍵])(K-1)}¨⍳(1+(⍴V)-K)
+      :EndIf
+    ∇
+    ∇ R←{A}combrNK(N K)
+    ⍝ Combinations of K from N with repetition
+    ⍝ A ∇ N K ← (A ∇ N-1 K) , (A,N ∇ N K-1)
+      ⍝ Init
+      :If 0=⎕NC'A' ⋄ A←⍬ ⋄ :EndIf
+      ⍝ Exit
+      :If K≤0 ⋄ R←,⊂,1 ⋄ :Return ⋄ :EndIf
+      ⍝ Base
+      :If K=1
+          R←{A,⍵}¨⍳N
+      :ElseIf N≤1
+          R←,⊂A,K⍴1
+      ⍝ Recurse
+      :Else
+          R←(A combrNK(N-1)K),((A,N)combrNK N(K-1))
+      :EndIf
+    ∇
+    ∇ R←crNK(N K)
+      ⍝ Exit
+      :If K≤0 ⋄ R←1 1⍴1 ⋄ :Return ⋄ :EndIf
+      ⍝ Base
+      :If K=1
+          R←N 1⍴⍳N
+      :ElseIf N≤1
+          R←1 K⍴1
+      ⍝ Recurse
+      :Else
+          R←(crNK(N-1)K)⍪(N,crNK N(K-1))
+      :EndIf
+    ∇
+    ∇ R←crnk(N K)
+    ⍝   R←N{⍵≤1:(,⊂)¨⍳⍺ ⋄ ⍸{⍵≡⍵[⍋⍵]}¨⍳⍵⍴⍺}K
+      R←N{⍵≤1:(,⊂)¨⍳⍺ ⋄ ⍸{∧/2≤/⍵}¨⍳⍵⍴⍺}K
+    ∇
+    ∇ R←{A}combrVK(V K)
+    ⍝ Combinations of K from Vector V with repetition
+    ⍝ ∇ V K ← (A ∇ V-1 K) , (A,V ∇ V K-1)
+      ⍝ Init
+      :If 0=⎕NC'A' ⋄ A←⍬ ⋄ :EndIf
+      ⍝ Base
+      :If (K≤0)∨(⍴V)≤0
+          R←,⊂1↑V
+      :ElseIf K=1
+          R←{A,⊂⍵}¨V
+      :ElseIf (⍴,V)=1
+          R←,⊂A,K⍴V
+      ⍝ Recurse
+      :Else
+          R←(A combrVK(¯1↓V)K),((A,¯1↑V)combrVK V(K-1))
+      :EndIf
+    ∇
+    ∇ R←{A}combMK(N K);M;takeN;remainN;DecK;Recs
+    ⍝ Combinations of K from sorted finite multiset N
+    ⍝ combMK N K ≡ combVK N K for set N with distinct elements
+      ⍝ Init
+      :If 0=⎕NC'A'
+          A←⍬
+          :If 1=≡N ⋄ N←partMulti N ⋄ :EndIf
+          ⍝ Exit
+          :If K≤0 ⋄ R←,⊂1⍴⊃N ⋄ :Return ⋄ :EndIf
+      :EndIf
+      ⍝ Entry
+      M←∊N
+      ⍝ Base
+      :If K=1
+          R←(⊂A),¨1↑¨N
+      :ElseIf K>⍴M
+          R←0⍴⊂0↑M
+      :ElseIf K=⍴M
+          R←(⊂A),¨,⊂M
+      ⍝ Recurse
+      :Else
+          takeN←{⍵ 1⊃N}
+          remainN←{((⊂1↓⍵⊃N),(⍵↓N))~⊂⍬}
+          DecK←K-1
+          Recs←((⍴M)-K-1)⊃⊃,/{(⍴⍵⊃N)⍴⍵}¨⍳⍴N
+          R←⊃,/{(A,takeN ⍵)combMK(remainN ⍵)(DecK)}¨⍳Recs
+      :EndIf
+⍝                       ∩∩ ∩
+⍝                      ∇122333 3
+⍝        ∩ ∩  /            | ∩∩        \  ∩
+⍝      1∇22333 2           2∇2333 2     3∇33 2
+⍝    ∩∩ /     \ ∩        ∩ /     \ ∩      |
+⍝ 12∇2333 1  13∇33 1  22∇333 1  23∇33 1  333
+⍝  |     |      |        |         |
+⍝ 122   123    133      223       233
+    ∇
+    ∇ R←cMK(N K);P
+      ⍝ Exit
+      :If K≤0 ⋄ R←1 1⍴⊃N ⋄ :Return ⋄ :EndIf
+      ⍝ Base
+      :If K=1
+          R←(⊃⍴R)1⍴R←⊃¨N⊆N ⍝ Reduce multiset to unique elements
+      :ElseIf K>⍴N
+          R←0 K⍴⍬
+      :ElseIf K=⍴N
+          R←1(⊃⍴N)⍴N
+      ⍝ Recurse
+      :Else
+          P←⍴⊃N⊆N ⍝ 1st partition size
+          R←((1⊃N),cMK(1↓N)(K-1))⍪(cMK(P↓N)K)
+      :EndIf
+    ∇
+    :EndSection
+
+    :Section Permutations
+    ∇ R←permN N
+    ⍝ Permutations of N
+      R←permV⍳N
+    ∇
+    ∇ R←permV V
+    ⍝ Permutations of Vector V
+      ⍝ Exit
+      :If 0≥⍴,V ⋄ R←,⊂0⍴,V ⋄ :Return ⋄ :EndIf
+      ⍝ Base
+      :If 1=⍴,V
+          R←,⊂,V
+      ⍝ Recurse
+      :Else
+          R←⊃,/{(⊂V[⍵]),¨permV(V[(⍳⍴V)~⍵])}¨⍳⍴V
+      :EndIf
+⍝ A ∇ V ← A,V[1] ∇ V~V[1] , A,V[2] ∇ V~V[2] , A,V[n] ∇ V~V[n]
+⍝                ∇123
+⍝      /           |          \
+⍝    1∇23        2∇13        3∇12
+⍝   /    \      /    \      /    \
+⍝ 12∇3  13∇2  21∇3  23∇1  31∇2  32∇1
+⍝   |    |      |    |      |    |
+⍝  123  132    213  231    312  321
+    ∇
+    ∇ R←permM N
+    ⍝ Permutations of finite sorted partitioned multiset N
+      ⍝ Init
+      :If 2>≡N
+          N←partMulti N
+      :EndIf
+      ⍝ Exit
+      :If 0≥⍴,N ⋄ R←,⊂0⍴,N ⋄ :Return ⋄ :EndIf
+      ⍝ Base
+      :If 1=⍴,N
+          R←N
+      ⍝ Recurse
+      :Else
+          R←⊃,/{(⊂1↑⍵⊃N),¨permM((((⊂1↓⍵⊃N)@⍵)N)~⊂0⍴⊃N)}¨⍳⍴N
+      :EndIf
+⍝ A ∇ 1=⍴N ← N
+⍝ A ∇ N ← A,N[1 1] ∇ N~N[1 1] , A,N[2 1] ∇ N~N[2 1] , A,N[n 1] ∇ N~N[n 1]
+⍝
+⍝                                   ∩∩ ∩
+⍝                                  ∇1223
+⍝         ∩ ∩ /                      |                    \   ∩∩
+⍝       1∇223                      2∇123                    3∇122
+⍝      /      \             /        |        \           /        \
+⍝    12∇23   13∇22     21∇23       22∇13       23∇12    31∇22    32∇12
+⍝   /     \    |      /     \     /     \     /     \    |      /     \
+⍝ 122∇3 123∇2 1322  212∇3 213∇2 221∇3 223∇1 231∇2 232∇1 3122  321∇2 322∇1
+⍝   |     |           |     |     |     |     |     |           |     |
+⍝ 1223  1232        2123  2132  2213  2231  2312  2321        3212  3221
+    ∇
+    ∇ R←permNKalt(N K)
+    ⍝ Permutations of K from vector V
+    ⍝ K-Permutation, Partial Permutation, Variation, Arrangement
+      R←⊃,/permV¨combNK N K
+    ∇
+    ∇ R←pNK(N K)
+      R←N{⍸{⍵≡∪⍵}¨⍳⍵⍴⍺}K
+    ∇
+    ∇ R←permVK(V K)
+    ⍝ Permutations of K from vector V
+    ⍝ K-Permutation, Partial Permutation, Variation, Arrangement
+      ⍝ Exit
+      :If K≤0 ⋄ R←,⊂1↑V ⋄ :Return ⋄ :EndIf
+      :If K>⍴V ⋄ R←0⍴⊂0↑V ⋄ :Return ⋄ :EndIf
+      ⍝ Base
+      :If K=1
+          R←(,⊂)¨V
+      ⍝ Recurse
+      :Else
+          R←⊃,/{(⊂V[⍵]),¨permVK(V~V[⍵])(K-1)}¨⍳⍴V
+      :EndIf
+⍝ A ∇ V 1 ← A,¨V
+⍝ A ∇ V K ← A,V[1] ∇ V~V[1] K-1 , A,V[2] ∇ V~V[2] K-1 , A,V[n] ∇ V~V[n] K-1
+⍝                     ∇123 2
+⍝        /              |               \
+⍝     1∇23 1          2∇13 1          3∇12 1
+⍝    /      \        /      \        /      \
+⍝ 12∇3 0  13∇2 0  21∇3 0  23∇1 0  31∇2 0  32∇1 0
+⍝   |        |      |        |      |        |
+⍝   12      13      21      23      31      32
+    ∇
+    ∇ R←{A}pVK(N K);r;e
+      ⍝ Tail recursion pattern
+      ⍝   A ∇ N 1 ← e/A,N
+      ⍝   A ∇ N K ← A,N ∇ N r K
+      ⍝ Init
+      :If 0=⎕NC'A'      ⍝ Tail recursion accumulator
+          A←⍬
+          ⍝ Exit
+          :If K≤0 ⋄ R←,⊂1↑N ⋄ :Return ⋄ :EndIf
+          :If K>⍴N ⋄ R←0⍴⊂0↑N ⋄ :Return ⋄ :EndIf
+      :EndIf
+      ⍝ Entry
+      ⍝   Reduce
+      ⍝   (1 2 3) r 2   -> (2 3 1)(3 1 2) 1
+      ⍝   (1 2 3 4) r 3 -> (2 1 1 1)(3 3 2 2)(4 4 4 3) 2
+    ⍝   r←{(↓[1]↑{1↓⍵⌽a}¨(⍳⍴a←⍺)-1)(⍵-1)}
+      r←{(↓[1](⊃⍴⍺)(¯1+⊃⍴⍺)⍴⌽⍺)(⍵-1)}
+      ⍝   Expand
+      ⍝   (1 2 3) e (2 3 1)(3 1 2) -> (1 2)(1 3)(2 3)(2 1)(3 1)(3 2)
+      e←{⊃⍪/⊂⍤2↑[1](⊂⍺),⍵}
+      ⍝ Base
+      :If K=1
+          R←⊃e/A,⊂↑(,⊂)¨N
+      :Else
+      ⍝ Recurse
+          R←(A,⊂N)pVK N r K
+      :EndIf
+    ∇
+      pvk←{⍺←⍬
+          (2⊃⍵)≤1:⊃{⊃⍪/⊂⍤2↑[1](⊂⍺),⍵}/⍺,⊂↑(,⊂)¨(1⊃⍵)
+          (⍺,⊂(1⊃⍵))∇((1⊃⍵){(↓[1](⊃⍴⍺)(¯1+⊃⍴⍺)⍴⌽⍺)(⍵-1)}(2⊃⍵))
+      }
+    ∇ R←permrNK(N K)
+    ⍝ Permutations of K from N with repetition. N-Tuple
+      :If K=0
+          R←,1
+      :ElseIf N=0
+          R←K⍴1
+      :Else
+          R←(N*K)⍴⍳K⍴N
+      :EndIf
+    ∇
+    ∇ R←permrNKalt(N K)
+    ⍝ Permutations of K from N with repetition. N-Tuple
+      R←∪⊃,/permV¨combrNK N K
+    ∇
+    ∇ R←permrVK(V K)
+    ⍝ Permutations of K from Vector V with repetition. N-Tuple
+      :If K≤0
+          R←,⊂1↑V
+      :Else
+          R←((⍴V)*K)⍴(∘.,)⍣(K-1)⍨{,⊂⍵}¨V
+      :EndIf
+    ∇
+    ∇ R←permrVKalt(V K)
+    ⍝ Permutations of K from Vector V with repetition. N-Tuple
+      R←∪⊃,/permV¨combrVK V K
+    ∇
+    ∇ R←permMK(M K);N
+    ⍝ Permutations of K from sorted finite multiset M
+      ⍝ Exit
+      :If K≤0 ⋄ R←,⊂1↑M ⋄ :Return ⋄ :EndIf
+      ⍝ Entry
+      N←partMulti M
+      ⍝ Base
+      :If K=1
+          R←1↑¨N
+      :ElseIf K>⍴M
+          R←0⍴⊂0↑M
+      ⍝ Recurse
+      :Else
+          R←⊃,/{(⊂1↑⍵⊃N),¨permMK(M[(⍳⍴M)~(M⍳1↑⍵⊃N)])(K-1)}¨⍳⍴N
+      :EndIf
+⍝ N ← Partitions M
+⍝ A ∇ M K ← A,N[1 1] ∇ M~N[1 1] K-1 , A,N[2 1] ∇ M~N[2 1] K-1 , A,N[n 1] ∇ M~N[n 1] K-1
+⍝
+⍝                             ∩∩ ∩
+⍝                            ∇1223 3
+⍝       ∩ ∩ /                   |                 \  ∩∩
+⍝     1∇223 2                2∇123 2               3∇122 2
+⍝    /       \         /        |       \         /       \
+⍝ 12∇23 1  13∇22 1  21∇23 1  22∇13 1  23∇12 1  31∇22 1  32∇12 1
+⍝  |   |      |      |   |    |   |    |   |      |      |   |
+⍝ 122 123    132    212 213  221 223  231 232    312    321 322
+    ∇
+    ∇ R←permMKalt(M K)
+      R←∪⊃,/permV¨combMK M K
+    ∇
+    :EndSection
+
+    :Section Compositions
+    ∇ R←comp N
+    ⍝ Compositions of N
+      R←{{((⍵+1)⊃w)-(⍵⊃w)}¨⍳¯1+⍴w←(0,(⍸⍵),N)}¨↓⍉((|N-1)⍴2)⊤(⍳⌊2*(N-1))-1
+    ∇
+    ∇ R←compm N
+    ⍝ Composition of N as multisets
+      R←{1+{+/w[⍳⍵]}¨⍳⍴w←⍵}¨↓⍉(N⍴2)⊤(⍳⌊2*(N-1))-1
+    ∇
+    ∇ R←comppm N
+    ⍝ Compositions of N as partitioned multisets
+      R←{{(w[⍵]⍴⍵)}¨⍳⍴w←⍵}¨comp N
+    ∇
+    :EndSection
+
+    :Section Partitions
+    ∇ R←part N
+    ⍝ Integer Partitions of N
+      R←∪{⍵[⍋⍵]}¨comp N
+    ∇
+    ∇ R←partalt N
+    ⍝ Integer partitions of N
+      R←⊃,/{,/{⍴⍵}¨⍵}¨∪{0×⍵[⍒{⍴⍵}¨⍵]}¨partMulti¨compm N
+    ∇
+    ∇ R←partd N;P
+    ⍝ Distinct partitions of N
+      P←part N
+      R←({(⊃⍴⍵)=⊃⍴∪⍵}¨P)/P
+    ∇
+    ∇ R←party P
+    ⍝ Young diagram of partition P
+      R←,{↑{⍵⍴'⎕'}¨⍵}¨P
+    ∇
+    :EndSection
+
+    :Section Auxiliaries
+    ⍝ Partitions
+    ∇ R←partMulti M
+      ⍝ Partition ordered multiset
+      R←((,M)⍸M)⊆,M
+    ∇
+    ⍝ General text formatting
+    pad←{↓1↓[2]↑' ',¨⍵} ⍝ Add spaces to avoid zeros when uplifting numeric matrices
+    ∇ save T;C
+      C←⍎T
+      C←↓(↑C),⍳⍴C
+      (⊂⍕¨C)⎕NPUT('Jazz Lore/Chords/gnuplot/',T,'.txt')1
+    ∇
+    :EndSection
+
+    :Section Visualisation
+    ∇ R←combinatoricsMatrix;M
+      M←4 4⍴''
+      M[1 2;]←⊂3 4⍴'    comb    '
+      M[3 4;]←⊂3 4⍴'    perm    '
+      M[;2 3]←(⊂3 1⍴,'K  '),¨M[;2 3]
+      M[;3 4]←M[;3 4],¨(⊂3 1⍴,'  R')
+      M[2 3;]←M[2 3;],¨(⊂3 1⍴,'  M')
+      M←(4 1⍴(,'C')(,'C')(,'P')(,'P')),M
+      M←M,(4 1⍴(' ')(,'M')(,'M')(' '))
+      M←(1 6⍴(' ')(' ')(,'K')(,'K')(' ')(' '))⍪M
+      M←M⍪(1 6⍴(' ')(' ')(' ')(,'R')(,'R')(' '))
+      R←M
+    ∇
+    :EndSection
+
+    :Section Verification
+    ∇ R←test A;F;P;S;T;PT;X;Y;axes;a1;a2
+      :If 3=⍴A ⋄ F P S T←A,0 ⋄ :Else ⋄ F P S T←A ⋄ :EndIf
+      PT←('Au')('Pb')('Li')('Yt')
+      :Select P
+      :Case 'I'
+          Y←(⍳S)-1
+      :Case 'N-'
+          Y←⍳¨(⍳S)-1
+      :Case '-N'
+          Y←(⊂⍬),{(-⍵)↑⍳S-1}¨(⍳S-1)
+      :Case 'V'
+          Y←{⍵↑PT}¨⍳S-1
+          Y←(⊂0⍴⊃0↑Y),Y
+      :Case 'M'
+          Y←(⊂⍬),compm S-1
+      :Case 'M-'
+          Y←⊃,/{(⊂⍬),{(⍵)↑w}¨⍳⍴w←⍵}¨compm S-1
+      :Case '-M'
+          Y←⊃,/{(⊂⍬),{(-⍵)↑w}¨⍳⍴w←⍵}¨compm S-1
+        ⍝   Y←(⊂⍬),⊃,/{{(-⍵)↑w}¨⍳⍴w←⍵}¨⊂1 2 3 3 4
+        ⍝   Y←(⊂⍬),⊃,/{{(⍵)↑w}¨⍳⍴w←⍵}¨⊂1 2 3 3 4
+      :Case 'MV'
+          Y←{(PT[⍋PT])[⍵]}¨compm S-1
+          Y←(⊂0⍴⊃0↑Y),Y
+      :Case 'PM'
+          Y←partMulti¨(⊂⍬),compm S-1
+      :Case 'PMV'
+          Y←{(PT[⍋PT])[⍵]}¨compm S-1
+          Y←partMulti¨(⊂0⍴⊃0↑Y),Y
+      :EndSelect
+      X←(⍳T)-1
+      axes←{(↑¨'\',Y),X⍪⍵}
+      a1←{(⊃⍴⍵)1⍴⍵}
+      a2←{{⍵∘.,X}⊂¨⍵}
+      :If T=0 ⍝ 1 arg
+          R←2 1⍴(⊂F,' ',P),⊂Y,{↑pad(⍎F)⍵}¨a1 Y
+      :Else   ⍝ 2 args
+          R←2 1⍴(⊂F,' ',P,' I'),⊂axes{#.Utils.matify(⍎F)⍵}¨a2 Y
+      :EndIf
+    ∇
+    ∇ R←testAll
+      R←2 0⍴''
+    ⍝   R,←test'comp' 'I' 5
+    ⍝   R,←test'compm' 'I' 5
+    ⍝   R,←test'comppm' 'I' 4
+    ⍝   R,←test'part' 'I' 5
+    ⍝   R,←test'partd' 'I' 5
+    ⍝   R,←test'party' 'M' 4
+     
+    ⍝   R,←test'combN' 'I' 4
+    ⍝   R,←test'combNK' 'I' 5 5
+    ⍝   R,←test'cNK' 'I' 5 5
+    ⍝   R,←test'combVK' 'V' 5 5
+    ⍝   R,←test'combrNK' 'I' 4 4
+    ⍝   R,←test'crNK' 'I' 4 4
+    ⍝   R,←test'crnk' 'I' 4 4
+    ⍝   R,←test'combrVK' 'V' 3 3
+    ⍝   R,←test'combMK' '-M' 5 5
+    ⍝   R,←test'cMK' 'M-' 5 5
+     
+    ⍝   R,←test'permN' 'I' 3
+    ⍝   R,←test'permV' 'V' 3
+    ⍝   R,←test'permM' 'M' 4
+    ⍝   R,←test'permM' 'PMV' 3
+    ⍝   R,←test'pNK' 'I' 4 4
+    ⍝   R,←test'permNKalt' 'I' 4 4
+    ⍝   R,←test'permVK' '-N' 5 5
+    ⍝   R,←test'permVK' 'V' 3 3
+    ⍝   R,←test'pVK' '-N' 5 5
+    ⍝   R,←test'permrNK' 'I' 3 3
+    ⍝   R,←test'permrNKalt' 'I' 3 3
+    ⍝   R,←test'permrVK' 'V' 3 3
+    ⍝   R,←test'permrVKalt' 'V' 3 3
+      R,←test'permMK' '-M' 4 4
+      R,←test'permMKalt' 'M-' 4 4
+    ∇
+    :EndSection
+:EndNamespace
